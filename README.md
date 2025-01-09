@@ -1,6 +1,22 @@
-## Purpose 
+## AnkiGPT – Telegram bot
 
 Learn dutch worlds using Anki flashcards.
+
+## Setup
+
+The bot requires a few environment variables to be set:
+
+```
+OPEN_API_KEY # ChatGPT API key
+TELEGRAM_BOT_TOKEN # Telegram bot token from BotFather
+ALLOWED_USER_IDS # Comma-separated list of user ids that can use the bot
+```
+
+To start the bot:
+
+```
+python bot.py
+```
 
 ## Workflow
 
@@ -53,7 +69,7 @@ Learn dutch worlds using Anki flashcards.
 - Can list all the words in the deck.
 - If called from a repl, it should print the list of words.
 
-# main.py
+### main.py
 
 - Receive the input from the user.
 - Calls chatgpt module to get the definitions of the words.
