@@ -63,3 +63,22 @@ def add_note(word: Word, deck_name: str = DECK_NAME) -> None:
         print(f"Note added successfully: {word.dutch}")
 
     return response
+
+def sync_anki() -> None:
+    """
+    Sync collections with AnkiWeb.
+    """
+
+    payload = {
+        "action": "sync",
+        "version": 6
+    }
+
+    response = requests.post(ANKI_CONNECT_URL, json=payload).json()
+
+    if response.get("error"):
+        print(f"Error during sync: {response['error']}")
+    else:
+        print("Sync successful.")
+
+    return response

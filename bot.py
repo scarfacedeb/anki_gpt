@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from chatgpt import get_definitions
-from anki import add_notes
+from anki import add_notes, sync_anki
 from word import Word, word_to_html
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your_telegram_bot_token_here")
@@ -31,6 +31,8 @@ def add_word_to_anki(user_input: str) -> list[Word]:
 
     if words:
         add_notes(words)
+
+    sync_anki()
 
     return words
 
