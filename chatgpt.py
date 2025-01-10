@@ -6,6 +6,8 @@ I want to learn dutch worlds using Anki flashcards.
 
 I'm going to send you a word OR a phrase in Dutch, and you'll create a word definition for the flashcard for me.
 
+If a word is a verb, use the infinitive form. If a word is a noun, use the singular form. If a word is an adjective, use the masculine singular form. But if the word is a past participle, keep it as is. In general, prefer the most common form of the word.
+
 Extra comments for the json schema:
 - Etymology (match the etymology format of wiktionary, but make it shorter, always use english language)
 - Related (only add related words that are etymologically related, prefer english, german, russian, french languages if possible)
