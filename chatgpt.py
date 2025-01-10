@@ -12,7 +12,7 @@ Extra comments for the json schema:
 - Grammar (het/de word, part of speech, parts of the word, like suffix, root, etc, some forms, like past tense.)
 - For definitions, if a word has multiple meanings, list top 2-3 most common ones.
 
-If I send a phrases in Dutch, extract the words and create a definition for each word. Prefer frequent or important to know words first. Skip filler words. Ignore words that are very similar to English, like e-mail or computer. Try to extract more than 80% of the words from the phrase.
+If I send a phrases in Dutch, extract the words and create a definition for each word. Prefer frequent or important to know words first. Ignore words that are very similar to English, like e-mail or computer. Try to extract more than 80% of the words from the phrase, but ignore filler words, like "niet". Also, add the translation of the whole phrase in English into "context" field as well.
 
 An example:
 {

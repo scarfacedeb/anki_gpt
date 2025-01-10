@@ -15,6 +15,7 @@ class Word(BaseModel):
 
 class WordList(BaseModel):
     words: list[Word]
+    context: str = Field(default=None, alias="Extra context to inform the user")
 
 def word_to_html(word: Word) -> str:
     examples = list(zip(word.examples_nl, word.examples_en))

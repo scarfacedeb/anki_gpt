@@ -27,14 +27,14 @@ def authorized(func):
 
 
 def add_word_to_anki(user_input: str) -> list[Word]:
-    words = get_definitions(user_input.lower()).words
+    response = get_definitions(user_input.lower())
 
-    if words:
-        add_notes(words)
+    if response.words:
+        add_notes(response.words)
 
     sync_anki()
 
-    return words
+    return response
 
 
 @authorized
@@ -48,11 +48,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
 
-    words = add_word_to_anki(user_input)
+    response = add_word_to_anki(user_input)
 
-    if words:
-        user = update.effective_user
-        for w in words:
+    if response.context:
+        await update.message.reply_text(response.context)
+
+    if response.words:
+        for w in response.words:
             response_text = word_to_html(w)
             await update.message.reply_html(response_text)
     else:
