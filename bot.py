@@ -52,11 +52,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if words:
         user = update.effective_user
-        response_text = ""
         for w in words:
-            response_text += word_to_html(w)
-            response_text += "\n\n"
-        await update.message.reply_html(response_text)
+            response_text = word_to_html(w)
+            await update.message.reply_html(response_text)
     else:
         await update.message.reply_text("No words found or could not parse.")
 
