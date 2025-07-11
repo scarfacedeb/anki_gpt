@@ -56,14 +56,12 @@ def get_definitions(input_text: str) -> WordList:
     messages = build_prompt(GET_DEFINITIONS_PROMPT, input_text)
 
     client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.chat.completions.create(
+    response = client.chat.completions.parse(
         model="gpt-4o-mini",
         messages=messages,
-        response_format={"type": "json_object"},
+        response_format=WordList
     )
-    
-    response_json = response.choices[0].message.content
-    return WordList.model_validate_json(response_json)
+    return response.choices[0].message.parsed
 
 
 def extract_words(input_text: str) -> list[str]:
