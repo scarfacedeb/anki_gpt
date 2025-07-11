@@ -75,7 +75,7 @@ def get_definitions(input_text: str) -> WordList:
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.chat.completions.parse(
-        model="gpt-4o-mini",
+        model="gpt-4.1-mini",
         messages=messages,
         response_format=WordList
     )
@@ -87,7 +87,7 @@ def extract_words(input_text: str) -> list[str]:
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4.1-mini",
         messages=messages
     )
 
