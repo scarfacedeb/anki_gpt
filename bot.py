@@ -2,6 +2,7 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+import asyncio
 
 from chatgpt import get_definitions
 from anki import add_notes, sync_anki
@@ -26,16 +27,17 @@ def authorized(func):
     return wrapper
 
 
+async def add_and_sync(words):
+    await asyncio.to_thread(add_notes, words)
+    await asyncio.to_thread(sync_anki)
+
 def add_word_to_anki(user_input: str) -> WordList:
     response = get_definitions(user_input.lower())
 
     if response.words:
-        add_notes(response.words)
-
-    sync_anki()
+        asyncio.create_task(add_and_sync(response.words))
 
     return response
-
 
 @authorized
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
