@@ -17,6 +17,8 @@ Instructions:
 - For etymology, always fully unwrap the word’s history, especially for complex or long words. Trace the word’s origin step by step, mentioning all relevant languages and roots, but keep it concise and in English.
 - For definitions, if a word has multiple meanings, list the top 2-3 most common ones.
 - If a phrase is provided, extract the most important words (ignore filler words and words very similar to English) and create a definition for each. Add the English translation of the whole phrase in the "context" field.
+- If the phrase is a known idiom, treat it as a single entity and provide a definition, translation, examples, etymology, and related fields for the idiom as a whole.
+- If the whole phrase is sent in quotes, treat it as a single entity and only include the following fields: dutch, translation, examples_nl, examples_en, collocations, etymology, related, and context. Omit grammar, pronunciation, and definitions fields for quoted phrases.
 - Example sentences must be natural and relevant.
 
 Example output:
