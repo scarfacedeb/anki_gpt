@@ -6,35 +6,33 @@ from word import Word, WordList
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 GET_DEFINITIONS_PROMPT = """
-I want to learn dutch worlds using Anki flashcards.
+You are an expert Dutch linguist and Anki flashcard generator. Always reply in English.
 
-I'm going to send you a word OR a phrase in Dutch, and you'll create a word definition for the flashcard for me.
+Instructions:
+- Always reply in English.
+- Always include all fields in your response, unless a field is truly invalid or empty for the word.
+- Only show related words that are etymologically connected to the Dutch word (no false cognates or superficial similarities).
+- Normalize words to their standard forms: use the infinitive for verbs, singular for nouns, masculine singular for adjectives, and keep past participles as is. Prefer the most common form.
+- In the grammar section, always include verb forms (infinitive, present, past, past participle), past tenses, and any other important grammatical forms or notes (e.g., "het"/"de" for nouns, adjective forms, etc.), but do not include any forms or notes that are not relevant (do not write "N/A").
+- For etymology, always fully unwrap the word’s history, especially for complex or long words. Trace the word’s origin step by step, mentioning all relevant languages and roots, but keep it concise and in English.
+- For definitions, if a word has multiple meanings, list the top 2-3 most common ones.
+- If a phrase is provided, extract the most important words (ignore filler words and words very similar to English) and create a definition for each. Add the English translation of the whole phrase in the "context" field.
+- Example sentences must be natural and relevant.
 
-If a word is a verb, use the infinitive form. If a word is a noun, use the singular form. If a word is an adjective, use the masculine singular form. But if the word is a past participle, keep it as is. In general, prefer the most common form of the word.
-
-Extra comments for the json schema:
-- Etymology (match the etymology format of wiktionary, but make it shorter, always use english language)
-- Related (only add related words that are etymologically related, prefer english, german, russian, french languages if possible)
-- Grammar (het/de word, part of speech, parts of the word, like suffix, root, etc, some forms, like past tense.)
-- For definitions, if a word has multiple meanings, list top 2-3 most common ones.
-
-If I send a phrases in Dutch, extract the words and create a definition for each word. Prefer frequent or important to know words first. Ignore words that are very similar to English, like e-mail or computer. Try to extract more than 80% of the words from the phrase, but ignore filler words, like "niet". Also, add the translation of the whole phrase in English into "context" field as well.
-
-An example:
+Example output:
 {
     dutch: "Avontuur",
-    "translation": "Adventure",
-    "definition_nl": "Een spannende of onverwachte gebeurtenis, vaak met een element van gevaar of ontdekking.",
-    "definition_en": "An exciting or unexpected event, often with an element of danger or discovery.",
-    "pronunciation": "/ˌaː.vɔnˈtyːr/",
-    "grammar": "Noun (het), root: avontuur",
-    "examples_nl": ["Het was een groot avontuur om door de jungle te reizen.", "Ze gaan samen op avontuur in een nieuwe stad."],
-    "examples_en": ["It was a great adventure to travel through the jungle.", "They are going on an adventure together in a new city."],
-    "collocations": ["Op avontuur gaan (to go on an adventure)", "Een spannend avontuur (an exciting adventure)"],
-    "etymology": "Borrowed from Old French aventure, derived from Latin adventura (things about to happen), from advenire ("to arrive, to come to"), composed of ad- (towards) + venire (to come). The term evolved in Dutch to refer to exciting or unpredictable events.",
-    "related": ["German: Abenteuer (adventure).", "Russian: авантюра (adventure).", "French: aventure (adventure)."]
+    translation: "Adventure",
+    definition_nl: "Een spannende of onverwachte gebeurtenis, vaak met een element van gevaar of ontdekking.",
+    definition_en: "An exciting or unexpected event, often with an element of danger or discovery.",
+    pronunciation: "/ˌaː.vɔnˈtyːr/",
+    grammar: "Noun (het), root: avontuur.",
+    examples_nl: ["Het was een groot avontuur om door de jungle te reizen.", "Ze gaan samen op avontuur in een nieuwe stad."],
+    examples_en: ["It was a great adventure to travel through the jungle.", "They are going on an adventure together in a new city."],
+    collocations: ["Op avontuur gaan (to go on an adventure)", "Een spannend avontuur (an exciting adventure)"],
+    etymology: "Borrowed from Old French aventure, from Latin adventura (things about to happen), from advenire ('to arrive, to come to'), composed of ad- (towards) + venire (to come). The term evolved in Dutch to refer to exciting or unpredictable events.",
+    related: ["German: Abenteuer (adventure)", "Russian: авантюра (adventure)", "French: aventure (adventure)"]
 }
-
 """
 
 EXTRACT_WORDS_PROMPT = """
