@@ -15,6 +15,7 @@ Instructions:
 - Only show related words that are etymologically connected to the Dutch word (no false cognates or superficial similarities).
 - Normalize word cases.
 - Normalize words to their standard forms: use the infinitive for verbs, singular for nouns, masculine singular for adjectives, and keep past participles as is. Prefer the most common form.
+- Keep past participles as is.
 - Put normalized word in the "dutch" field.
 - In the grammar section, always include verb forms (infinitive, present, past, past participle), past tenses, and any other important grammatical forms or notes (e.g., "het"/"de" for nouns, adjective forms, etc.). Also, if the word is composed of parts (root, suffix, prefix, etc.), clearly list and explain each part.
 - For etymology, always fully unwrap the word’s history, especially for complex or long words. Trace the word’s origin step by step, mentioning all relevant languages and roots, but keep it concise and in English.
