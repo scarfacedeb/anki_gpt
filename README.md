@@ -1,21 +1,56 @@
-## AnkiGPT – Telegram bot
+# AnkiGPT – Telegram bot
 
-Learn dutch worlds using Anki flashcards.
+Learn Dutch words using Anki flashcards with the help of GPT-4.
+
+## Installation
+
+1. Clone the repository
+2. Install the required packages:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Make sure Anki is running with the AnkiConnect plugin installed
 
 ## Setup
 
 The bot requires a few environment variables to be set:
 
 ```
-OPEN_API_KEY # ChatGPT API key
+OPENAI_API_KEY # ChatGPT API key
 TELEGRAM_BOT_TOKEN # Telegram bot token from BotFather
 ALLOWED_USER_IDS # Comma-separated list of user ids that can use the bot
 ```
 
+To set these environment variables in your shell:
+
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+export TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+export ALLOWED_USER_IDS="123456789,987654321"
+```
+
+## Usage
+
+### Telegram Bot
+
 To start the bot:
 
-```
+```bash
 python bot.py
+```
+
+### Command Line Interface
+
+To use the CLI:
+
+```bash
+python main.py
+```
+
+Or for a simpler interface:
+
+```bash
+python cli.py
 ```
 
 ## Workflow

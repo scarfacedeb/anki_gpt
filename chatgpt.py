@@ -1,5 +1,9 @@
 from openai import OpenAI
+import os
 from word import Word, WordList
+
+# Get API key from environment variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 GET_DEFINITIONS_PROMPT = """
 I want to learn dutch worlds using Anki flashcards.
@@ -44,27 +48,28 @@ Should return: spannende; onverwachte; gebeurtenis; vaak; gevaar; ontdekking
 
 def build_prompt(prompt: str, input_text: str) -> list[dict]:
     return [
-        {"role": "developer", "content": prompt},
+        {"role": "system", "content": prompt},
         {"role": "user", "content": input_text},
     ]
 
-def get_definitions(input_text: str) -> list[Word]:
+def get_definitions(input_text: str) -> WordList:
     messages = build_prompt(GET_DEFINITIONS_PROMPT, input_text)
 
-    client = OpenAI()
-    response = client.beta.chat.completions.parse(
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
-        response_format=WordList
+        response_format={"type": "json_object"},
     )
-
-    return response.choices[0].message.parsed
+    
+    response_json = response.choices[0].message.content
+    return WordList.model_validate_json(response_json)
 
 
 def extract_words(input_text: str) -> list[str]:
     messages = build_prompt(EXTRACT_WORDS_PROMPT, input_text)
 
-    client = OpenAI()
+    client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages

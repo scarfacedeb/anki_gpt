@@ -1,11 +1,14 @@
 import requests
 import sys
+import logging
 from word import Word
 
 ANKI_CONNECT_URL = "http://localhost:8765"
 MODEL_NAME = "GPT"
 DECK_NAME = "Default"
 TAGS = ["gpt"]
+
+logger = logging.getLogger(__name__)
 
 def build_note(word: Word, deck_name: str = DECK_NAME) -> dict:
     return {
@@ -52,17 +55,21 @@ def add_note(word: Word, deck_name: str = DECK_NAME) -> None:
         }
     }
 
-    response = requests.post(ANKI_CONNECT_URL, json=payload).json()
-
-    if response.get("error"):
-        if "cannot create note because it is a duplicate" in response["error"]:
-            pass
+    try:
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=5).json()
+        
+        if response.get("error"):
+            if "cannot create note because it is a duplicate" in response["error"]:
+                logger.info(f"Note already exists: {word.dutch}")
+            else:
+                logger.error(f"Error adding note: {response['error']}")
         else:
-            print(f"Error adding note: {response['error']}")
-    else:
-        print(f"Note added successfully: {word.dutch}")
-
-    return response
+            logger.info(f"Note added successfully: {word.dutch}")
+        
+        return response
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error to AnkiConnect: {e}")
+        return {"error": f"Connection error: {str(e)}"}
 
 def sync_anki() -> None:
     """
@@ -74,11 +81,15 @@ def sync_anki() -> None:
         "version": 6
     }
 
-    response = requests.post(ANKI_CONNECT_URL, json=payload).json()
-
-    if response.get("error"):
-        print(f"Error during sync: {response['error']}")
-    else:
-        print("Sync successful.")
-
-    return response
+    try:
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=5).json()
+        
+        if response.get("error"):
+            logger.error(f"Error during sync: {response['error']}")
+        else:
+            logger.info("Sync successful.")
+        
+        return response
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error to AnkiConnect: {e}")
+        return {"error": f"Connection error: {str(e)}"}

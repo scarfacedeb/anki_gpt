@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 class Word(BaseModel):
-    dutch: str
+    dutch: str = Field(validation_alias="Word or phrase to define in dutch")
     translation: str
     definition_nl: str
     definition_en: str
@@ -13,9 +13,17 @@ class Word(BaseModel):
     etymology: str
     related: list[str]
 
+    model_config = {
+        "populate_by_name": True
+    }
+
 class WordList(BaseModel):
     words: list[Word]
-    context: str = Field(default=None, alias="Extra context to inform the user")
+    context: str | None = Field(default=None, validation_alias="Extra context to inform the user")
+    
+    model_config = {
+        "populate_by_name": True
+    }
 
 def word_to_html(word: Word) -> str:
     examples = list(zip(word.examples_nl, word.examples_en))

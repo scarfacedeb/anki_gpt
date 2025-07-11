@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from chatgpt import get_definitions
 from anki import add_notes, sync_anki
-from word import Word, word_to_html
+from word import Word, word_to_html, WordList
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your_telegram_bot_token_here")
 ALLOWED_USER_IDS = set(map(int, os.getenv("ALLOWED_USER_IDS", "").split(",")))
@@ -19,14 +19,14 @@ def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
         user_id = update.effective_user.id
         if user_id not in ALLOWED_USER_IDS:
-            await update.message.reply_text("You are not authorized to use this bot (ID: {user_id}.")
+            await update.message.reply_text(f"You are not authorized to use this bot (ID: {user_id}).")
             return
 
         await func(update, context, *args, **kwargs)
     return wrapper
 
 
-def add_word_to_anki(user_input: str) -> list[Word]:
+def add_word_to_anki(user_input: str) -> WordList:
     response = get_definitions(user_input.lower())
 
     if response.words:
