@@ -40,7 +40,7 @@ def word_to_html(word: Word) -> str:
         f"<b>Collocations:</b> {', '.join(word.collocations)}",
         f"<b>Etymology:</b> {word.etymology}",
         f"<b>Related:</b> {', '.join(word.related)}",
-        f"<i>{examples_html}</i>"
+        f"<b>Examples:</b><i>{examples_html}</i>"
     ]
 
     return "\n".join(lines)
