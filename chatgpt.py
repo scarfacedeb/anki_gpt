@@ -76,9 +76,9 @@ def get_definitions(input_text: str) -> WordList:
     messages = build_prompt(GET_DEFINITIONS_PROMPT, input_text)
 
     client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.chat.completions.parse(
+    response = client.responses.create(
         model="gpt-5-mini",
-        messages=messages,
+        input=messages,
         response_format=WordList,
         reasoning_effort="low"
     )
@@ -89,9 +89,9 @@ def extract_words(input_text: str) -> list[str]:
     messages = build_prompt(EXTRACT_WORDS_PROMPT, input_text)
 
     client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.chat.completions.create(
+    response = client.responses.create(
         model="gpt-5-mini",
-        messages=messages,
+        input=messages,
         reasoning_effort="low"
     )
 
