@@ -35,7 +35,7 @@ class TestChatGPTConfiguration:
         mock_client.chat.completions.parse.assert_called_once()
         call_args = mock_client.chat.completions.parse.call_args
         
-        assert call_args.kwargs['model'] == 'gpt-5-nano'
+        assert call_args.kwargs['model'] == 'gpt-5-mini'
         assert call_args.kwargs['reasoning_effort'] == 'low'
         assert call_args.kwargs['response_format'] == WordList
         assert len(call_args.kwargs['messages']) == 2
@@ -56,7 +56,7 @@ class TestChatGPTConfiguration:
         mock_client.chat.completions.create.assert_called_once()
         call_args = mock_client.chat.completions.create.call_args
         
-        assert call_args.kwargs['model'] == 'gpt-5-nano'
+        assert call_args.kwargs['model'] == 'gpt-5-mini'
         assert call_args.kwargs['reasoning_effort'] == 'low'
         assert len(call_args.kwargs['messages']) == 2
         
