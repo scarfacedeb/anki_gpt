@@ -76,13 +76,13 @@ def get_definitions(input_text: str) -> WordList:
     messages = build_prompt(GET_DEFINITIONS_PROMPT, input_text)
 
     client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.responses.create(
+    response = client.responses.parse(
         model="gpt-5-mini",
         input=messages,
         response_format=WordList,
         reasoning_effort="low"
     )
-    return response.choices[0].message.parsed
+    return response.parsed
 
 
 def extract_words(input_text: str) -> list[str]:
@@ -95,7 +95,7 @@ def extract_words(input_text: str) -> list[str]:
         reasoning_effort="low"
     )
 
-    return response.choices[0].message.content.split('; ')
+    return response.output_text.split('; ')
 
 
 if __name__ == "__main__":
