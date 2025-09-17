@@ -123,12 +123,12 @@ def sync_anki() -> None:
 
     try:
         response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=5).json()
-        
+
         if response.get("error"):
             logger.error(f"Error during sync: {response['error']}")
         else:
             logger.info("Sync successful.")
-        
+
         return response
     except requests.exceptions.RequestException as e:
         logger.error(f"Connection error to AnkiConnect: {e}")

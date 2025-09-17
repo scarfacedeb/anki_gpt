@@ -1,6 +1,9 @@
 from openai import OpenAI
 import os
+import logging
 from word import Word, WordList
+
+logger = logging.getLogger(__name__)
 
 # Get API key from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -75,7 +78,7 @@ def build_prompt(prompt: str, input_text: str) -> list[dict]:
     ]
 
 def get_definitions(input_text: str) -> WordList:
-    messages = build_prompt(GET_DEFINITIONS_PROMPT, input_text)
+    logger.info(f"Input: {input_text}")
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.parse(
@@ -85,12 +88,18 @@ def get_definitions(input_text: str) -> WordList:
         instructions=GET_DEFINITIONS_PROMPT,
         input=input_text,
     )
-    return response.output_text
+
+    result = response.output_parsed
+
+    if hasattr(result, 'words') and result.words:
+        for word in result.words:
+            logger.info(f"Output: {word.dutch} - {word.translation}")
+
+    return result
 
 
 def extract_words(input_text: str) -> list[str]:
     messages = build_prompt(EXTRACT_WORDS_PROMPT, input_text)
-
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.create(
         model=OPENAI_MODEL,
@@ -102,6 +111,8 @@ def extract_words(input_text: str) -> list[str]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     test_input = "hond kat of vis"
     definitions = get_definitions(test_input)
     print(definitions)
