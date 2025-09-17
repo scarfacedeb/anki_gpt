@@ -4,6 +4,8 @@ from word import Word, WordList
 
 # Get API key from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "minimal")
 
 GET_DEFINITIONS_PROMPT = """
 You are an expert Dutch linguist and Anki flashcard generator. Always reply in English.
@@ -77,10 +79,10 @@ def get_definitions(input_text: str) -> WordList:
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.parse(
-        model="gpt-5-mini",
+        model=OPENAI_MODEL,
         input=messages,
         response_format=WordList,
-        reasoning_effort="low"
+        reasoning_effort=OPENAI_MODEL_EFFORT
     )
     return response.parsed
 
@@ -90,9 +92,9 @@ def extract_words(input_text: str) -> list[str]:
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.create(
-        model="gpt-5-mini",
+        model=OPENAI_MODEL,
         input=messages,
-        reasoning_effort="low"
+        reasoning_effort=OPENAI_MODEL_EFFORT
     )
 
     return response.output_text.split('; ')
