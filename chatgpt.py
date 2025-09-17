@@ -4,7 +4,7 @@ from word import Word, WordList
 
 # Get API key from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano")
 OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "minimal")
 
 GET_DEFINITIONS_PROMPT = """
@@ -80,11 +80,12 @@ def get_definitions(input_text: str) -> WordList:
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.parse(
         model=OPENAI_MODEL,
-        input=messages,
-        response_format=WordList,
-        reasoning_effort=OPENAI_MODEL_EFFORT
+        reasoning={ 'effort': OPENAI_MODEL_EFFORT },
+        text_format=WordList,
+        instructions=GET_DEFINITIONS_PROMPT,
+        input=input_text,
     )
-    return response.parsed
+    return response.output_text
 
 
 def extract_words(input_text: str) -> list[str]:
@@ -94,7 +95,7 @@ def extract_words(input_text: str) -> list[str]:
     response = client.responses.create(
         model=OPENAI_MODEL,
         input=messages,
-        reasoning_effort=OPENAI_MODEL_EFFORT
+        reasoning={ 'effort': OPENAI_MODEL_EFFORT }
     )
 
     return response.output_text.split('; ')
@@ -102,5 +103,5 @@ def extract_words(input_text: str) -> list[str]:
 
 if __name__ == "__main__":
     test_input = "hond kat of vis"
-    definitions = extract_words(test_input)
+    definitions = get_definitions(test_input)
     print(definitions)
