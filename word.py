@@ -32,14 +32,15 @@ def word_to_html(word: Word) -> str:
     )
 
     lines = [
-        f"<b>{word.dutch}</b>",
+        f"<b>{word.dutch}</b>\n",
         f"<b>Translation:</b> {word.translation}",
-        f"<b>Definition:</b> {word.definition_nl} ({word.definition_en})",
-        f"<b>Pronunciation:</b> {word.pronunciation}",
-        f"<b>Grammar:</b> {word.grammar}",
-        f"<b>Collocations:</b> {', '.join(word.collocations)}",
         f"<b>Etymology:</b> {word.etymology}",
+        f"<b>Grammar:</b> {word.grammar}",
+        f"<b>Pronunciation:</b> {word.pronunciation}",
+        f"<b>Collocations:</b> {', '.join(word.collocations)}",
         f"<b>Related:</b> {', '.join(word.related)}",
+        f"<b>Definition:</b> {word.definition_nl} ",
+        f"<b>Definition EN:</b> {word.definition_en} ",
         f"<b>Examples:</b><i>{examples_html}</i>"
     ]
 
