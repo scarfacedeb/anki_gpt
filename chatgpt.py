@@ -2,13 +2,14 @@ from openai import OpenAI
 import os
 import logging
 from word import Word, WordList
+from user_settings import get_user_config
 
 logger = logging.getLogger(__name__)
 
 # Get API key from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano")
-OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "minimal")
+OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "low")
 
 GET_DEFINITIONS_PROMPT = """
 You are an expert Dutch linguist and Anki flashcard generator. Always reply in English.
@@ -77,13 +78,15 @@ def build_prompt(prompt: str, input_text: str) -> list[dict]:
         {"role": "user", "content": input_text},
     ]
 
-def get_definitions(input_text: str) -> WordList:
+def get_definitions(input_text: str, user_id: int) -> WordList:
     logger.info(f"Input: {input_text}")
+
+    config = get_user_config(user_id)
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.responses.parse(
-        model=OPENAI_MODEL,
-        reasoning={ 'effort': OPENAI_MODEL_EFFORT },
+        model=config.model,
+        reasoning={ 'effort': config.effort },
         text_format=WordList,
         instructions=GET_DEFINITIONS_PROMPT,
         input=input_text,
