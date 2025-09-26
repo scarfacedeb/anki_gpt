@@ -4,7 +4,6 @@ from typing import Dict, Any
 from dataclasses import dataclass
 
 SETTINGS_FILE = "user_settings.json"
-_user_config_cache: Dict[int, UserConfig] = {}
 
 ALLOWED_MODELS = [
     "gpt-5-nano",
@@ -38,6 +37,8 @@ class UserConfig:
             "model": self.model,
             "effort": self.effort
         }
+
+_user_config_cache: Dict[int, UserConfig] = {}
 
 def load_user_settings() -> Dict[str, Dict[str, Any]]:
     if not os.path.exists(SETTINGS_FILE):
