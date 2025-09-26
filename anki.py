@@ -1,7 +1,7 @@
 import requests
 import sys
 import logging
-from word import Word
+from word import Word, word_to_anki
 
 ANKI_CONNECT_URL = "http://localhost:8765"
 MODEL_NAME = "GPT"
@@ -14,19 +14,7 @@ def build_note(word: Word, deck_name: str = DECK_NAME) -> dict:
     return {
         "deckName": deck_name,
         "modelName": MODEL_NAME,
-        "fields": {
-            "Word": word.dutch,
-            "Translation": word.translation,
-            "Definition": word.definition_nl,
-            "Definition (eng)": word.definition_en,
-            "Pronunciation": word.pronunciation,
-            "Grammar": word.grammar,
-            "Collocations": "\n".join(word.collocations),
-            "Examples": "\n".join(word.examples_nl),
-            "Examples (eng)": "\n".join(word.examples_en),
-            "Etymology": word.etymology,
-            "Related": "\n".join(word.related)
-        },
+        "fields": word_to_anki(word),
         "options": {
             "allowDuplicate": False
         },

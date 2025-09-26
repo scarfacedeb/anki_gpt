@@ -26,6 +26,23 @@ class WordList(BaseModel):
         "populate_by_name": True
     }
 
+def word_to_anki(word: Word) -> dict:
+    """Convert a Word object to Anki fields dictionary."""
+    return {
+        "Word": word.dutch,
+        "Translation": word.translation,
+        "Definition": word.definition_nl,
+        "Definition (eng)": word.definition_en,
+        "Pronunciation": word.pronunciation,
+        "Grammar": word.grammar,
+        "Collocations": "\n".join(word.collocations),
+        "Synonyms": "\n".join(word.synonyms),
+        "Examples": "\n".join(word.examples_nl),
+        "Examples (eng)": "\n".join(word.examples_en),
+        "Etymology": word.etymology,
+        "Related": "\n".join(word.related)
+    }
+
 def word_to_html(word: Word) -> str:
     examples = list(zip(word.examples_nl, word.examples_en))
     examples_html = "".join(
