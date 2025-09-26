@@ -8,6 +8,7 @@ class Word(BaseModel):
     pronunciation: str
     grammar: str
     collocations: list[str]
+    synonyms: list[str]
     examples_nl: list[str]
     examples_en: list[str]
     etymology: str
@@ -38,6 +39,7 @@ def word_to_html(word: Word) -> str:
         f"<b>Grammar:</b> {word.grammar}",
         f"<b>Pronunciation:</b> {word.pronunciation}",
         f"<b>Collocations:</b> {', '.join(word.collocations)}",
+        f"<b>Synonyms:</b> {', '.join(word.synonyms)}",
         f"<b>Related:</b> {', '.join(word.related)}",
         f"<b>Definition:</b> {word.definition_nl} ",
         f"<b>Definition EN:</b> {word.definition_en} ",
