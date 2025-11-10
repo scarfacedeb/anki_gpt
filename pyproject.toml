@@ -1,0 +1,31 @@
+[project]
+name = "anki-gpt"
+version = "0.1.0"
+description = "AI-powered Dutch vocabulary learning with Anki integration"
+readme = "README.md"
+authors = [
+    { name = "Andrew Volozhanin", email = "scarfacedeb@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=1.62.0",
+    "python-telegram-bot>=21.5",
+    "pydantic>=2.9.0",
+    "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+anki-gpt-cli = "cli:main"
+anki-gpt-bot = "bot:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
