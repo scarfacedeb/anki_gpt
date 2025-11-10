@@ -33,8 +33,8 @@
         <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
     </header>
 
-    <div class="search-box">
-        <form method="GET" action="/">
+    <div class="search-sort-wrapper">
+        <form method="GET" action="/" class="search-box">
             <input
                 type="text"
                 name="q"
@@ -43,50 +43,53 @@
             >
             <button type="submit">Search</button>
         </form>
-    </div>
 
-    <div class="sort-controls">
-        <label>Sort by:</label>
-        <select id="sort-by" onchange="updateSort()">
-            <option value="dutch" {% if sort_by == 'dutch' %}selected{% endif %}>Dutch</option>
-            <option value="translation" {% if sort_by == 'translation' %}selected{% endif %}>Translation</option>
-            <option value="grammar" {% if sort_by == 'grammar' %}selected{% endif %}>Grammar</option>
-        </select>
+        <div class="sort-controls">
+            <label>Sort by:</label>
+            <select id="sort-by" onchange="updateSort()">
+                <option value="dutch" {% if sort_by == 'dutch' %}selected{% endif %}>Dutch</option>
+                <option value="translation" {% if sort_by == 'translation' %}selected{% endif %}>Translation</option>
+                <option value="grammar" {% if sort_by == 'grammar' %}selected{% endif %}>Grammar</option>
+            </select>
 
-        <label>Order:</label>
-        <select id="order" onchange="updateSort()">
-            <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
-            <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
-        </select>
+            <label>Order:</label>
+            <select id="order" onchange="updateSort()">
+                <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+            </select>
+        </div>
     </div>
 
     {% if words_data %}
-    <!-- Pagination Top -->
-    {% if total_pages > 1 %}
-    <div class="pagination">
-        {% if page > 1 %}
-            <a href="?{{ get_pagination_url(page - 1, query, sort_by, order) }}" class="pagination-btn">← Prev</a>
-        {% else %}
-            <span class="pagination-btn disabled">← Prev</span>
-        {% endif %}
-
-        {% for p in page_range %}
-            {% if p == '...' %}
-                <span class="pagination-ellipsis">...</span>
-            {% elif p == page %}
-                <span class="pagination-btn active">{{ p }}</span>
+    <!-- Pagination Top (only show from page 2 onwards) -->
+    {% if total_pages > 1 and page > 1 %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if page > 1 %}
+                <a href="?{{ get_pagination_url(page - 1, query, sort_by, order) }}" class="pagination-btn">← Prev</a>
             {% else %}
-                <a href="?{{ get_pagination_url(p, query, sort_by, order) }}" class="pagination-btn">{{ p }}</a>
+                <span class="pagination-btn disabled">← Prev</span>
             {% endif %}
-        {% endfor %}
 
-        {% if page < total_pages %}
-            <a href="?{{ get_pagination_url(page + 1, query, sort_by, order) }}" class="pagination-btn">Next →</a>
-        {% else %}
-            <span class="pagination-btn disabled">Next →</span>
-        {% endif %}
+            {% for p in page_range %}
+                {% if p == '...' %}
+                    <span class="pagination-ellipsis">...</span>
+                {% elif p == page %}
+                    <span class="pagination-btn active">{{ p }}</span>
+                {% else %}
+                    <a href="?{{ get_pagination_url(p, query, sort_by, order) }}" class="pagination-btn">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <a href="?{{ get_pagination_url(page + 1, query, sort_by, order) }}" class="pagination-btn">Next →</a>
+            {% else %}
+                <span class="pagination-btn disabled">Next →</span>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
+
     <div class="word-list">
         {% for word, updated_at in words_data %}
         <div class="word-card">

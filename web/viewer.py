@@ -89,19 +89,19 @@ def index():
     end_idx = start_idx + per_page
     words_data = all_words[start_idx:end_idx]
 
-    # Calculate page range to show (e.g., 1 2 3 ... last)
+    # Calculate page range to show (maximum 3 pages)
     page_range = []
-    if total_pages <= 7:
-        # Show all pages if 7 or fewer
+    if total_pages <= 3:
+        # Show all pages if 3 or fewer
         page_range = list(range(1, total_pages + 1))
     else:
-        # Show first 3, current page area, and last page
-        if page <= 3:
-            page_range = list(range(1, 5)) + ['...', total_pages]
-        elif page >= total_pages - 2:
-            page_range = [1, '...'] + list(range(total_pages - 3, total_pages + 1))
+        # Show maximum 3 pages centered around current page
+        if page == 1:
+            page_range = [1, 2, 3]
+        elif page >= total_pages:
+            page_range = [total_pages - 2, total_pages - 1, total_pages]
         else:
-            page_range = [1, '...', page - 1, page, page + 1, '...', total_pages]
+            page_range = [page - 1, page, page + 1]
 
     stats = db.get_stats()
 
