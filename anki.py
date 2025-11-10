@@ -22,13 +22,14 @@ def build_note(word: Word, deck_name: str = DECK_NAME) -> dict:
     }
 
 
-def add_notes(words: list[Word], deck_name: str = DECK_NAME) -> None:
+def add_notes(words: list[Word], deck_name: str = DECK_NAME) -> list[tuple[Word, int | None]]:
     """
     Adds the given words to Anki via the AnkiConnect API.
     Each Word object will be added as a note in a given deck_name.
+    Returns a list of tuples: (Word, note_id or None).
     """
     # Can't use addNotes because it fails the whole batch on duplicates
-    return [add_note(word, deck_name) for word in words]
+    return [(word, add_note(word, deck_name)) for word in words]
 
 def find_note_id(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
@@ -45,9 +46,10 @@ def find_note_id(word: Word, deck_name: str = DECK_NAME) -> int | None:
     note_ids = find_response.get("result", [])
     return note_ids[0] if note_ids else None
 
-def update_note(word: Word, deck_name: str = DECK_NAME) -> None:
+def update_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
     Updates an existing note in Anki with new fields for the given word.
+    Returns the note_id if successful, None otherwise.
     """
     note_id = find_note_id(word, deck_name)
     if note_id:
@@ -64,15 +66,19 @@ def update_note(word: Word, deck_name: str = DECK_NAME) -> None:
         update_response = requests.post(ANKI_CONNECT_URL, json=update_payload, timeout=5).json()
         if update_response.get("error"):
             logger.error(f"Error updating note: {update_response['error']}")
+            return None
         else:
             logger.info(f"Note updated successfully: {word.dutch}")
+            return note_id
     else:
         logger.error(f"Could not find note to update for: {word.dutch}")
+        return None
 
-def add_note(word: Word, deck_name: str = DECK_NAME) -> None:
+def add_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
     Adds the given word to Anki via the AnkiConnect API.
     If the note already exists, updates it instead.
+    Returns the note_id if successful, None otherwise.
     """
     payload = {
         "action": "addNote",
@@ -88,16 +94,18 @@ def add_note(word: Word, deck_name: str = DECK_NAME) -> None:
         if response.get("error"):
             if "cannot create note because it is a duplicate" in response["error"]:
                 logger.info(f"Note already exists: {word.dutch}, updating note...")
-                update_note(word, deck_name)
+                return update_note(word, deck_name)
             else:
                 logger.error(f"Error adding note: {response['error']}")
+                return None
         else:
+            note_id = response.get("result")
             logger.info(f"Note added successfully: {word.dutch}")
+            return note_id
 
-        return response
     except requests.exceptions.RequestException as e:
         logger.error(f"Connection error to AnkiConnect: {e}")
-        return {"error": f"Connection error: {str(e)}"}
+        return None
 
 def sync_anki() -> None:
     """

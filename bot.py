@@ -8,6 +8,7 @@ from chatgpt import get_definitions
 from anki import add_notes, sync_anki
 from word import Word, word_to_html, WordList
 from user_settings import get_user_config, set_user_model, set_user_effort, ALLOWED_MODELS, ALLOWED_EFFORTS
+from db import WordDatabase
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your_telegram_bot_token_here")
 ALLOWED_USER_IDS = set(map(int, os.getenv("ALLOWED_USER_IDS", "").split(",")))
@@ -29,13 +30,27 @@ def authorized(func):
 
 
 async def add_and_sync(words):
-    await asyncio.to_thread(add_notes, words)
+    # Add to Anki and get note IDs
+    results = await asyncio.to_thread(add_notes, words)
+
+    # Mark words as synced in database
+    db = WordDatabase()
+    for word, note_id in results:
+        if note_id:
+            db.mark_synced(word.dutch, note_id)
+
+    # Sync with AnkiWeb
     await asyncio.to_thread(sync_anki)
 
 def add_word_to_anki(user_input: str, user_id: int) -> WordList:
     response = get_definitions(user_input.lower(), user_id)
 
     if response.words:
+        # Save words to database first
+        db = WordDatabase()
+        db.save_words(response.words)
+
+        # Then add to Anki asynchronously
         asyncio.create_task(add_and_sync(response.words))
 
     return response
