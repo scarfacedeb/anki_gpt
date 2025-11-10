@@ -63,13 +63,15 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     transition: color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 header {
@@ -91,8 +93,10 @@ header {
 h1 {
     color: var(--text-primary);
     margin-bottom: 10px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-size: 28px;
+    line-height: 1.2;
 }
 
 .stats {
@@ -261,8 +265,9 @@ h1 {
 
 .word-dutch {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.015em;
 }
 
 .word-translation {
@@ -325,10 +330,12 @@ h1 {
 }
 
 .word-label {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-secondary);
     margin-bottom: 6px;
-    font-size: 14px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .word-content {
@@ -531,6 +538,8 @@ a:hover {
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 8px;
+    font-size: 14px;
+    letter-spacing: -0.01em;
 }
 
 .form-input, .form-textarea {
