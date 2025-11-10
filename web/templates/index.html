@@ -3,10 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Anki GPT - Word Viewer</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Prevent flash of white background */
+        html {
+            background-color: #f8f9fa;
+        }
+        @media (prefers-color-scheme: dark) {
+            html {
+                background-color: #0f172a;
+            }
+        }
+        html.dark-mode {
+            background-color: #0f172a;
+        }
+    </style>
     <script>
-        // Apply theme immediately to prevent flash
+        // Apply theme immediately to prevent flash - must run before any rendering
         (function() {
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -16,6 +30,7 @@
             }
         })();
     </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <header>
@@ -45,17 +60,14 @@
         </form>
 
         <div class="sort-controls">
-            <label>Sort by:</label>
-            <select id="sort-by" onchange="updateSort()">
-                <option value="dutch" {% if sort_by == 'dutch' %}selected{% endif %}>Dutch</option>
-                <option value="translation" {% if sort_by == 'translation' %}selected{% endif %}>Translation</option>
-                <option value="grammar" {% if sort_by == 'grammar' %}selected{% endif %}>Grammar</option>
-            </select>
-
-            <label>Order:</label>
-            <select id="order" onchange="updateSort()">
-                <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
-                <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+            <label>Sort:</label>
+            <select id="sort-combined" onchange="updateSort()">
+                <option value="dutch-asc" {% if sort_by == 'dutch' and order == 'asc' %}selected{% endif %}>Dutch (A → Z)</option>
+                <option value="dutch-desc" {% if sort_by == 'dutch' and order == 'desc' %}selected{% endif %}>Dutch (Z → A)</option>
+                <option value="translation-asc" {% if sort_by == 'translation' and order == 'asc' %}selected{% endif %}>Translation (A → Z)</option>
+                <option value="translation-desc" {% if sort_by == 'translation' and order == 'desc' %}selected{% endif %}>Translation (Z → A)</option>
+                <option value="grammar-asc" {% if sort_by == 'grammar' and order == 'asc' %}selected{% endif %}>Grammar (A → Z)</option>
+                <option value="grammar-desc" {% if sort_by == 'grammar' and order == 'desc' %}selected{% endif %}>Grammar (Z → A)</option>
             </select>
         </div>
     </div>
@@ -215,8 +227,8 @@
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
         function updateSort() {
-            const sortBy = document.getElementById('sort-by').value;
-            const order = document.getElementById('order').value;
+            const combined = document.getElementById('sort-combined').value;
+            const [sortBy, order] = combined.split('-');
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('sort', sortBy);
             urlParams.set('order', order);

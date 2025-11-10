@@ -3,13 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Edit Word - Anki GPT</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        /* Prevent flash of white background */
+        html {
+            background-color: #f8f9fa;
+        }
+        @media (prefers-color-scheme: dark) {
+            html {
+                background-color: #0f172a;
+            }
+        }
+        html.dark-mode {
+            background-color: #0f172a;
+        }
         body {
             max-width: 800px;
         }
     </style>
+    <script>
+        // Apply theme immediately to prevent flash - must run before any rendering
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark)) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <header>
