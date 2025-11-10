@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Word - Anki GPT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>✏️ Edit Word: {{ word.dutch }}</h1>
+    </header>
+
+    <div class="edit-form">
+        <form method="POST" action="/update/{{ word.dutch | urlencode }}">
+            <div class="form-group">
+                <label class="form-label">Dutch Word</label>
+                <input type="text" name="dutch" class="form-input" value="{{ word.dutch }}" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Translation</label>
+                <input type="text" name="translation" class="form-input" value="{{ word.translation }}" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Pronunciation</label>
+                <input type="text" name="pronunciation" class="form-input" value="{{ word.pronunciation }}" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Grammar</label>
+                <input type="text" name="grammar" class="form-input" value="{{ word.grammar }}" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Definition (Dutch)</label>
+                <textarea name="definition_nl" class="form-textarea" required>{{ word.definition_nl }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Definition (English)</label>
+                <textarea name="definition_en" class="form-textarea" required>{{ word.definition_en }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Collocations</label>
+                <textarea name="collocations" class="form-textarea">{{ word.collocations | join('\n') }}</textarea>
+                <div class="form-help">One per line</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Synonyms</label>
+                <textarea name="synonyms" class="form-textarea">{{ word.synonyms | join('\n') }}</textarea>
+                <div class="form-help">One per line</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Related Words</label>
+                <textarea name="related" class="form-textarea">{{ word.related | join('\n') }}</textarea>
+                <div class="form-help">One per line</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Examples (Dutch)</label>
+                <textarea name="examples_nl" class="form-textarea">{{ word.examples_nl | join('\n') }}</textarea>
+                <div class="form-help">One per line</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Examples (English)</label>
+                <textarea name="examples_en" class="form-textarea">{{ word.examples_en | join('\n') }}</textarea>
+                <div class="form-help">One per line</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Etymology</label>
+                <textarea name="etymology" class="form-textarea">{{ word.etymology }}</textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

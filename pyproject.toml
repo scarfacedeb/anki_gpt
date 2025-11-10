@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.9.0",
     "requests>=2.32.0",
     "python-dotenv>=1.2.1",
+    "flask>=3.1.2",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +26,7 @@ anki-gpt-cli = "cli:main"
 anki-gpt-bot = "bot:main"
 anki-gpt-import = "sync:main_import"
 anki-gpt-export = "sync:main_export"
+anki-gpt-viewer = "web.viewer:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]

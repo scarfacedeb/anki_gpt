@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki GPT - Word Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>📚 Anki GPT - Word Viewer</h1>
+        <div class="stats">
+            Total words: {{ stats.total_words }} |
+            Synced to Anki: {{ stats.synced_to_anki }} |
+            Unsynced: {{ stats.unsynced }}
+        </div>
+    </header>
+
+    <div class="search-box">
+        <form method="GET" action="/">
+            <input
+                type="text"
+                name="q"
+                placeholder="Search for Dutch words, translations, or definitions..."
+                value="{{ query or '' }}"
+            >
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div class="sort-controls">
+        <label>Sort by:</label>
+        <select id="sort-by" onchange="updateSort()">
+            <option value="dutch" {% if sort_by == 'dutch' %}selected{% endif %}>Dutch</option>
+            <option value="translation" {% if sort_by == 'translation' %}selected{% endif %}>Translation</option>
+            <option value="grammar" {% if sort_by == 'grammar' %}selected{% endif %}>Grammar</option>
+        </select>
+
+        <label>Order:</label>
+        <select id="order" onchange="updateSort()">
+            <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+        </select>
+    </div>
+
+    {% if words %}
+    <div class="word-list">
+        {% for word in words %}
+        <div class="word-card">
+            <div class="word-summary" onclick="toggleDetails(this)">
+                <button class="expand-btn">▶</button>
+                <div class="word-dutch">{{ word.dutch }}</div>
+                <div class="word-translation">{{ word.translation }}</div>
+                <div class="word-grammar-pronunciation">
+                    <div class="word-grammar">{{ word.grammar }}</div>
+                    <div class="word-pronunciation">{{ word.pronunciation }}</div>
+                </div>
+                <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
+            </div>
+
+            <div class="word-details">
+                <div class="word-section">
+                    <div class="word-label">Definition (NL)</div>
+                    <div class="word-content">{{ word.definition_nl }}</div>
+                </div>
+
+                <div class="word-section">
+                    <div class="word-label">Definition (EN)</div>
+                    <div class="word-content">{{ word.definition_en }}</div>
+                </div>
+
+                {% if word.collocations %}
+                <div class="word-section">
+                    <div class="word-label">Collocations</div>
+                    <div class="word-list-inline">{{ word.collocations | join(', ') }}</div>
+                </div>
+                {% endif %}
+
+                {% if word.synonyms %}
+                <div class="word-section">
+                    <div class="word-label">Synonyms</div>
+                    <div class="word-list-inline">{{ word.synonyms | join(', ') }}</div>
+                </div>
+                {% endif %}
+
+                {% if word.related %}
+                <div class="word-section">
+                    <div class="word-label">Related Words</div>
+                    <div class="word-list-inline">{{ word.related | join(', ') }}</div>
+                </div>
+                {% endif %}
+
+                {% if word.examples_nl %}
+                <div class="word-section">
+                    <div class="word-label">Examples</div>
+                    <div class="examples">
+                        {% for nl, en in zip(word.examples_nl, word.examples_en) %}
+                        <div class="example-item">
+                            <div class="example-nl">{{ nl }}</div>
+                            <div class="example-en">{{ en }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if word.etymology %}
+                <div class="word-section">
+                    <div class="word-label">Etymology</div>
+                    <div class="word-content">{{ word.etymology }}</div>
+                </div>
+                {% endif %}
+
+                <div class="word-actions">
+                    <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">Edit</a>
+                    <form method="POST" action="/delete/{{ word.dutch | urlencode }}" style="display: inline;">
+                        <button type="submit" class="btn btn-delete" onclick="event.stopPropagation(); return confirm('Are you sure you want to delete {{ word.dutch }}?')">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-results">
+        {% if query %}
+            No words found for "{{ query }}"
+        {% else %}
+            No words in database yet. Add some words using the CLI!
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        function updateSort() {
+            const sortBy = document.getElementById('sort-by').value;
+            const order = document.getElementById('order').value;
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('sort', sortBy);
+            urlParams.set('order', order);
+            window.location.search = urlParams.toString();
+        }
+    </script>
+</body>
+</html>
