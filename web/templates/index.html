@@ -5,15 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anki GPT - Word Viewer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        // Apply theme immediately to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark)) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
 </head>
 <body>
     <header>
-        <h1>📚 Anki GPT - Word Viewer</h1>
-        <div class="stats">
-            Total words: {{ stats.total_words }} |
-            Synced to Anki: {{ stats.synced_to_anki }} |
-            Unsynced: {{ stats.unsynced }}
+        <div class="header-left">
+            <h1>📚 Anki GPT - Word Viewer</h1>
+            <div class="stats">
+                Total words: {{ stats.total_words }} |
+                Synced to Anki: {{ stats.synced_to_anki }} |
+                Unsynced: {{ stats.unsynced }}
+                {% if showing_count > 0 %}
+                | Showing {{ showing_start }}-{{ showing_end }} of {{ total_words }}
+                {% endif %}
+            </div>
         </div>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
     </header>
 
     <div class="search-box">
@@ -43,22 +60,57 @@
         </select>
     </div>
 
-    {% if words %}
+    {% if words_data %}
+    <!-- Pagination Top -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+            <a href="?{{ get_pagination_url(page - 1, query, sort_by, order) }}" class="pagination-btn">← Prev</a>
+        {% else %}
+            <span class="pagination-btn disabled">← Prev</span>
+        {% endif %}
+
+        {% for p in page_range %}
+            {% if p == '...' %}
+                <span class="pagination-ellipsis">...</span>
+            {% elif p == page %}
+                <span class="pagination-btn active">{{ p }}</span>
+            {% else %}
+                <a href="?{{ get_pagination_url(p, query, sort_by, order) }}" class="pagination-btn">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+            <a href="?{{ get_pagination_url(page + 1, query, sort_by, order) }}" class="pagination-btn">Next →</a>
+        {% else %}
+            <span class="pagination-btn disabled">Next →</span>
+        {% endif %}
+    </div>
+    {% endif %}
     <div class="word-list">
-        {% for word in words %}
+        {% for word, updated_at in words_data %}
         <div class="word-card">
             <div class="word-summary" onclick="toggleDetails(this)">
-                <button class="expand-btn">▶</button>
-                <div class="word-dutch">{{ word.dutch }}</div>
+                <div class="word-dutch">
+                    {{ word.dutch }}
+                    <div style="font-size: 11px; color: var(--text-dim); font-weight: normal; margin-top: 2px;">
+                        {{ updated_at[:10] if updated_at else '' }}
+                    </div>
+                </div>
                 <div class="word-translation">{{ word.translation }}</div>
                 <div class="word-grammar-pronunciation">
-                    <div class="word-grammar">{{ word.grammar }}</div>
+                    <div class="word-grammar">{{ word.grammar[:60] }}{% if word.grammar|length > 60 %}...{% endif %}</div>
                     <div class="word-pronunciation">{{ word.pronunciation }}</div>
                 </div>
                 <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
             </div>
 
             <div class="word-details">
+                <div class="word-section">
+                    <div class="word-label">Grammar</div>
+                    <div class="word-content">{{ word.grammar }}</div>
+                </div>
+
                 <div class="word-section">
                     <div class="word-label">Definition (NL)</div>
                     <div class="word-content">{{ word.definition_nl }}</div>
@@ -113,14 +165,40 @@
 
                 <div class="word-actions">
                     <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">Edit</a>
-                    <form method="POST" action="/delete/{{ word.dutch | urlencode }}" style="display: inline;">
-                        <button type="submit" class="btn btn-delete" onclick="event.stopPropagation(); return confirm('Are you sure you want to delete {{ word.dutch }}?')">Delete</button>
-                    </form>
+                    <button class="btn btn-delete" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">Delete</button>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
+
+    <!-- Pagination Bottom -->
+    {% if total_pages > 1 %}
+    <div class="pagination bottom">
+        {% if page > 1 %}
+            <a href="?{{ get_pagination_url(page - 1, query, sort_by, order) }}" class="pagination-btn">← Prev</a>
+        {% else %}
+            <span class="pagination-btn disabled">← Prev</span>
+        {% endif %}
+
+        {% for p in page_range %}
+            {% if p == '...' %}
+                <span class="pagination-ellipsis">...</span>
+            {% elif p == page %}
+                <span class="pagination-btn active">{{ p }}</span>
+            {% else %}
+                <a href="?{{ get_pagination_url(p, query, sort_by, order) }}" class="pagination-btn">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+            <a href="?{{ get_pagination_url(page + 1, query, sort_by, order) }}" class="pagination-btn">Next →</a>
+        {% else %}
+            <span class="pagination-btn disabled">Next →</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="no-results">
         {% if query %}
@@ -139,6 +217,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('sort', sortBy);
             urlParams.set('order', order);
+            urlParams.delete('page');  // Reset to page 1 when sorting changes
             window.location.search = urlParams.toString();
         }
     </script>
