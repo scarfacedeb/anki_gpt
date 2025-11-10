@@ -2,8 +2,8 @@ import requests
 import sys
 import logging
 from word import Word, word_to_anki
+from config import ENABLE_ANKI_SYNC, ANKI_CONNECT_URL
 
-ANKI_CONNECT_URL = "http://localhost:8765"
 MODEL_NAME = "GPT"
 DECK_NAME = "Default"
 TAGS = ["gpt"]
@@ -103,6 +103,9 @@ def sync_anki() -> None:
     """
     Sync collections with AnkiWeb.
     """
+    if not ENABLE_ANKI_SYNC:
+        logger.info("Anki sync is disabled via config (ENABLE_ANKI_SYNC=false)")
+        return {"result": None, "sync_skipped": True}
 
     payload = {
         "action": "sync",
