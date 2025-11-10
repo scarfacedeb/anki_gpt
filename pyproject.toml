@@ -23,6 +23,8 @@ dev = [
 [project.scripts]
 anki-gpt-cli = "cli:main"
 anki-gpt-bot = "bot:main"
+anki-gpt-import = "sync:main_import"
+anki-gpt-export = "sync:main_export"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
