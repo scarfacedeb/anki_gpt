@@ -12,12 +12,19 @@ from dotenv import load_dotenv
 from urllib.parse import urlencode
 from db import WordDatabase
 from word import Word
+from chatgpt import get_definitions
+from user_settings import UserConfig, set_user_config
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 db = WordDatabase()
+
+# Set up better model for web interface regeneration (user_id=0)
+WEB_USER_ID = 0
+web_config = UserConfig(model="gpt-5-mini", effort="medium")
+set_user_config(WEB_USER_ID, web_config)
 
 def build_pagination_url(page, query, sort_by, order):
     """Build URL query string for pagination."""
@@ -180,6 +187,72 @@ def update_word(dutch):
     print(f"Updated word: {word.dutch}")
 
     return redirect(url_for('index'))
+
+@app.route('/regenerate/<path:dutch>', methods=['POST'])
+def regenerate_word(dutch):
+    """Regenerate a word using ChatGPT with gpt-5-mini and medium effort."""
+    try:
+        # Get the current word
+        current_word = db.get_word(dutch)
+        if not current_word:
+            return jsonify({'success': False, 'error': 'Word not found'}), 404
+
+        # Regenerate using ChatGPT (uses gpt-5-mini with medium effort)
+        result = get_definitions(dutch, user_id=WEB_USER_ID)
+
+        if not result.words or len(result.words) == 0:
+            return jsonify({'success': False, 'error': 'Failed to regenerate word'}), 500
+
+        new_word = result.words[0]
+
+        # Return both old and new word data
+        return jsonify({
+            'success': True,
+            'current': {
+                'dutch': current_word.dutch,
+                'translation': current_word.translation,
+                'definition_nl': current_word.definition_nl,
+                'definition_en': current_word.definition_en,
+                'pronunciation': current_word.pronunciation,
+                'grammar': current_word.grammar,
+                'collocations': current_word.collocations,
+                'synonyms': current_word.synonyms,
+                'examples_nl': current_word.examples_nl,
+                'examples_en': current_word.examples_en,
+                'etymology': current_word.etymology,
+                'related': current_word.related
+            },
+            'new': {
+                'dutch': new_word.dutch,
+                'translation': new_word.translation,
+                'definition_nl': new_word.definition_nl,
+                'definition_en': new_word.definition_en,
+                'pronunciation': new_word.pronunciation,
+                'grammar': new_word.grammar,
+                'collocations': new_word.collocations,
+                'synonyms': new_word.synonyms,
+                'examples_nl': new_word.examples_nl,
+                'examples_en': new_word.examples_en,
+                'etymology': new_word.etymology,
+                'related': new_word.related
+            }
+        })
+    except Exception as e:
+        print(f"Error regenerating word: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/confirm-regenerate/<path:dutch>', methods=['POST'])
+def confirm_regenerate(dutch):
+    """Confirm and save the regenerated word."""
+    try:
+        word_data = request.json
+        word = Word(**word_data)
+        db.save_word(word)
+        print(f"Confirmed regenerated word: {word.dutch}")
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving regenerated word: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def main():
     """CLI entry point for the word viewer."""

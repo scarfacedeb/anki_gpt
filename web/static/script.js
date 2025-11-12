@@ -78,5 +78,135 @@ async function deleteWord(dutch, cardElement) {
     }
 }
 
+// Regenerate word
+let currentRegeneratedData = null;
+
+async function regenerateWord(dutch, cardElement) {
+    const modal = document.getElementById('regenerateModal');
+    const loading = document.getElementById('regenerateLoading');
+    const comparison = document.getElementById('regenerateComparison');
+    const footer = document.getElementById('modalFooter');
+
+    // Show modal with loading state
+    modal.style.display = 'flex';
+    loading.style.display = 'block';
+    comparison.style.display = 'none';
+    footer.style.display = 'none';
+
+    try {
+        const response = await fetch(`/regenerate/${encodeURIComponent(dutch)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentRegeneratedData = data.new;
+            displayComparison(data.current, data.new);
+
+            // Show comparison and footer
+            loading.style.display = 'none';
+            comparison.style.display = 'grid';
+            footer.style.display = 'flex';
+        } else {
+            alert('Failed to regenerate word: ' + (data.error || 'Unknown error'));
+            closeRegenerateModal();
+        }
+    } catch (error) {
+        console.error('Error regenerating word:', error);
+        alert('Failed to regenerate word. Please try again.');
+        closeRegenerateModal();
+    }
+}
+
+function displayComparison(current, newData) {
+    const currentVersion = document.getElementById('currentVersion');
+    const newVersion = document.getElementById('newVersion');
+
+    const fields = [
+        { key: 'translation', label: 'Translation' },
+        { key: 'pronunciation', label: 'Pronunciation' },
+        { key: 'grammar', label: 'Grammar' },
+        { key: 'definition_nl', label: 'Definition (NL)' },
+        { key: 'definition_en', label: 'Definition (EN)' },
+        { key: 'collocations', label: 'Collocations', isArray: true },
+        { key: 'synonyms', label: 'Synonyms', isArray: true },
+        { key: 'related', label: 'Related Words', isArray: true },
+        { key: 'examples_nl', label: 'Examples (NL)', isArray: true },
+        { key: 'examples_en', label: 'Examples (EN)', isArray: true },
+        { key: 'etymology', label: 'Etymology' }
+    ];
+
+    currentVersion.innerHTML = fields.map(field => {
+        const value = current[field.key];
+        const displayValue = field.isArray
+            ? (value && value.length > 0 ? value.join(', ') : '<em>None</em>')
+            : (value || '<em>None</em>');
+        return `
+            <div class="comparison-field">
+                <div class="comparison-label">${field.label}</div>
+                <div class="comparison-value">${displayValue}</div>
+            </div>
+        `;
+    }).join('');
+
+    newVersion.innerHTML = fields.map(field => {
+        const value = newData[field.key];
+        const displayValue = field.isArray
+            ? (value && value.length > 0 ? value.join(', ') : '<em>None</em>')
+            : (value || '<em>None</em>');
+        return `
+            <div class="comparison-field">
+                <div class="comparison-label">${field.label}</div>
+                <div class="comparison-value">${displayValue}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function confirmRegeneratedWord() {
+    if (!currentRegeneratedData) return;
+
+    try {
+        const response = await fetch(`/confirm-regenerate/${encodeURIComponent(currentRegeneratedData.dutch)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(currentRegeneratedData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            closeRegenerateModal();
+            // Reload the page to show updated word
+            location.reload();
+        } else {
+            alert('Failed to save word: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving word:', error);
+        alert('Failed to save word. Please try again.');
+    }
+}
+
+function closeRegenerateModal() {
+    const modal = document.getElementById('regenerateModal');
+    modal.style.display = 'none';
+    currentRegeneratedData = null;
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('regenerateModal');
+    if (event.target === modal) {
+        closeRegenerateModal();
+    }
+}
+
 // Initialize theme on page load
 document.addEventListener('DOMContentLoaded', initTheme);

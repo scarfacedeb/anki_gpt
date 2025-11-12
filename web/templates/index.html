@@ -184,6 +184,7 @@
                 {% endif %}
 
                 <div class="word-actions">
+                    <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">🔄 Regenerate</button>
                     <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">Edit</a>
                     <button class="btn btn-delete" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">Delete</button>
                 </div>
@@ -228,6 +229,36 @@
         {% endif %}
     </div>
     {% endif %}
+
+    <!-- Regenerate Modal -->
+    <div id="regenerateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Review Regenerated Word</h2>
+                <button class="modal-close" onclick="closeRegenerateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="regenerate-loading" id="regenerateLoading">
+                    <div class="spinner"></div>
+                    <p>Regenerating word with ChatGPT...</p>
+                </div>
+                <div class="regenerate-comparison" id="regenerateComparison" style="display: none;">
+                    <div class="comparison-column">
+                        <h3>Current Version</h3>
+                        <div id="currentVersion"></div>
+                    </div>
+                    <div class="comparison-column">
+                        <h3>New Version</h3>
+                        <div id="newVersion"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="modalFooter" style="display: none;">
+                <button class="btn btn-secondary" onclick="closeRegenerateModal()">Decline</button>
+                <button class="btn btn-primary" onclick="confirmRegeneratedWord()">Confirm & Save</button>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
