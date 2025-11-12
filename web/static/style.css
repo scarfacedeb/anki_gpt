@@ -3,21 +3,21 @@
     --bg-secondary: #ffffff;
     --bg-tertiary: #fafbfc;
     --bg-hover: #f6f8fa;
-    --text-primary: #1a1a1a;
-    --text-secondary: #4a5568;
-    --text-tertiary: #6b7280;
-    --text-muted: #9ca3af;
-    --text-dim: #d1d5db;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-tertiary: #475569;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
     --border-light: #f3f4f6;
     --border-medium: #e5e7eb;
-    --border-dark: #d1d5db;
-    --accent-blue: #3b82f6;
-    --accent-blue-dark: #2563eb;
-    --accent-blue-light: #60a5fa;
-    --accent-red: #ef4444;
-    --accent-red-dark: #dc2626;
+    --border-dark: #cbd5e1;
+    --accent-blue: #2563eb;
+    --accent-blue-dark: #1d4ed8;
+    --accent-blue-light: #3b82f6;
+    --accent-red: #dc2626;
+    --accent-red-dark: #b91c1c;
     --accent-gray: #f3f4f6;
-    --accent-gray-dark: #6b7280;
+    --accent-gray-dark: #475569;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
@@ -28,26 +28,26 @@ html.dark-mode {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
     --bg-tertiary: #1a2332;
-    --bg-hover: #2d3748;
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --text-tertiary: #94a3b8;
-    --text-muted: #64748b;
-    --text-dim: #475569;
-    --border-light: #2d3748;
-    --border-medium: #334155;
-    --border-dark: #475569;
-    --accent-blue: #3b82f6;
-    --accent-blue-dark: #2563eb;
-    --accent-blue-light: #60a5fa;
-    --accent-red: #ef4444;
-    --accent-red-dark: #dc2626;
-    --accent-gray: #2d3748;
-    --accent-gray-dark: #64748b;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --bg-hover: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #e2e8f0;
+    --text-tertiary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --border-light: #334155;
+    --border-medium: #475569;
+    --border-dark: #64748b;
+    --accent-blue: #60a5fa;
+    --accent-blue-dark: #3b82f6;
+    --accent-blue-light: #93c5fd;
+    --accent-red: #f87171;
+    --accent-red-dark: #ef4444;
+    --accent-gray: #334155;
+    --accent-gray-dark: #94a3b8;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -100,9 +100,10 @@ h1 {
 }
 
 .stats {
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     font-size: 14px;
     margin-top: 10px;
+    font-weight: 500;
 }
 
 .theme-toggle {
@@ -189,8 +190,8 @@ h1 {
 }
 
 .sort-controls label {
-    color: var(--text-tertiary);
-    font-weight: 500;
+    color: var(--text-secondary);
+    font-weight: 600;
 }
 
 .sort-controls select {
@@ -271,8 +272,9 @@ h1 {
 }
 
 .word-translation {
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: 15px;
+    font-weight: 500;
 }
 
 .word-grammar-pronunciation {
@@ -282,21 +284,22 @@ h1 {
 }
 
 .word-grammar {
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     font-size: 14px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
 }
 
 .word-pronunciation {
-    color: var(--text-dim);
+    color: var(--text-muted);
     font-size: 13px;
     font-style: italic;
 }
 
 .word-preview {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 14px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -339,13 +342,13 @@ h1 {
 }
 
 .word-content {
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     line-height: 1.6;
     font-size: 14px;
 }
 
 .word-list-inline {
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     font-size: 14px;
 }
 
@@ -383,10 +386,11 @@ h1 {
     color: var(--text-primary);
     margin-bottom: 3px;
     font-size: 14px;
+    font-weight: 500;
 }
 
 .example-en {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 13px;
 }
 
@@ -567,8 +571,8 @@ a:hover {
 }
 
 .form-help {
-    font-size: 14px;
-    color: var(--text-dim);
+    font-size: 13px;
+    color: var(--text-muted);
     margin-top: 4px;
 }
 

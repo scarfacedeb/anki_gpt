@@ -30,7 +30,7 @@ def build_pagination_url(page, query, sort_by, order):
 app.jinja_env.globals.update(get_pagination_url=build_pagination_url)
 
 def get_words_with_timestamps(query=None):
-    """Get words with their updated_at timestamps."""
+    """Get words with their created_at and updated_at timestamps."""
     import sqlite3
     from pathlib import Path
 
@@ -44,19 +44,19 @@ def get_words_with_timestamps(query=None):
         if query:
             search_pattern = f"%{query}%"
             cursor.execute("""
-                SELECT *, updated_at FROM words
+                SELECT * FROM words
                 WHERE dutch LIKE ? OR translation LIKE ?
                    OR definition_nl LIKE ? OR definition_en LIKE ?
-                ORDER BY created_at DESC
             """, (search_pattern, search_pattern, search_pattern, search_pattern))
         else:
-            cursor.execute("SELECT *, updated_at FROM words ORDER BY created_at DESC")
+            cursor.execute("SELECT * FROM words")
 
         rows = cursor.fetchall()
         for row in rows:
             word = db._dict_to_word(dict(row))
+            created_at = row['created_at']
             updated_at = row['updated_at']
-            words_data.append((word, updated_at))
+            words_data.append((word, created_at, updated_at))
 
     return words_data
 
@@ -64,8 +64,8 @@ def get_words_with_timestamps(query=None):
 def index():
     """Main page showing all words or search results with pagination."""
     query = request.args.get('q', '').strip()
-    sort_by = request.args.get('sort', 'dutch')  # Default sort by dutch word
-    order = request.args.get('order', 'asc')  # Default ascending
+    sort_by = request.args.get('sort', 'created_at')  # Default sort by created date
+    order = request.args.get('order', 'desc')  # Default newest first
     page = int(request.args.get('page', 1))  # Current page
     per_page = 100  # Words per page
 
@@ -79,6 +79,8 @@ def index():
         all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
     elif sort_by == 'grammar':
         all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
+    elif sort_by == 'created_at':
+        all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
 
     # Pagination
     total_words = len(all_words)

@@ -65,6 +65,8 @@
         <div class="sort-controls">
             <label>Sort:</label>
             <select id="sort-combined" onchange="updateSort()">
+                <option value="created_at-desc" {% if sort_by == 'created_at' and order == 'desc' %}selected{% endif %}>Newest First</option>
+                <option value="created_at-asc" {% if sort_by == 'created_at' and order == 'asc' %}selected{% endif %}>Oldest First</option>
                 <option value="dutch-asc" {% if sort_by == 'dutch' and order == 'asc' %}selected{% endif %}>Dutch (A → Z)</option>
                 <option value="dutch-desc" {% if sort_by == 'dutch' and order == 'desc' %}selected{% endif %}>Dutch (Z → A)</option>
                 <option value="translation-asc" {% if sort_by == 'translation' and order == 'asc' %}selected{% endif %}>Translation (A → Z)</option>
@@ -106,7 +108,7 @@
     {% endif %}
 
     <div class="word-list">
-        {% for word, updated_at in words_data %}
+        {% for word, created_at, updated_at in words_data %}
         <div class="word-card">
             <div class="word-summary" onclick="toggleDetails(this)">
                 <div class="word-dutch">
