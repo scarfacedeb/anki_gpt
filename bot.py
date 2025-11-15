@@ -6,10 +6,10 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 import asyncio
 
 from chatgpt import get_definitions
-from anki import add_notes, sync_anki
+from anki import sync_anki
 from word import Word, word_to_html, WordList
 from user_settings import get_user_config, set_user_model, set_user_effort, ALLOWED_MODELS, ALLOWED_EFFORTS
-from db import WordDatabase
+from word_sync import save_and_sync_words
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,15 +33,10 @@ def authorized(func):
     return wrapper
 
 
-async def add_and_sync(words):
-    # Add to Anki and get note IDs
-    results = await asyncio.to_thread(add_notes, words)
-
-    # Mark words as synced in database
-    db = WordDatabase()
-    for word, note_id in results:
-        if note_id:
-            db.mark_synced(word.dutch, note_id)
+async def save_sync_and_web_sync(words):
+    """Save to DB, sync to Anki, and sync with AnkiWeb asynchronously."""
+    # Save to database and sync to Anki
+    await asyncio.to_thread(save_and_sync_words, words)
 
     # Sync with AnkiWeb
     await asyncio.to_thread(sync_anki)
@@ -50,12 +45,8 @@ def add_word_to_anki(user_input: str, user_id: int) -> WordList:
     response = get_definitions(user_input.lower(), user_id)
 
     if response.words:
-        # Save words to database first
-        db = WordDatabase()
-        db.save_words(response.words)
-
-        # Then add to Anki asynchronously
-        asyncio.create_task(add_and_sync(response.words))
+        # Save to database and sync to Anki asynchronously
+        asyncio.create_task(save_sync_and_web_sync(response.words))
 
     return response
 

@@ -2,6 +2,7 @@
 Simple HTML viewer for browsing the local word database.
 """
 import sys
+import logging
 from pathlib import Path
 
 # Add parent directory to path to import from main package
@@ -14,9 +15,13 @@ from db import WordDatabase
 from word import Word
 from chatgpt import get_definitions
 from user_settings import UserConfig, set_user_config
+from word_sync import save_and_sync_word
 
 # Load environment variables
 load_dotenv()
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 db = WordDatabase()
@@ -136,9 +141,9 @@ def delete_word(dutch):
     """Delete a word from the database."""
     success = db.delete_word(dutch)
     if success:
-        print(f"Deleted word: {dutch}")
+        logger.info(f"Deleted word: {dutch}")
     else:
-        print(f"Failed to delete word: {dutch}")
+        logger.warning(f"Failed to delete word: {dutch}")
 
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax'):
@@ -174,8 +179,8 @@ def quick_add_word():
 
         # Save the first word (usually there's only one)
         word = result.words[0]
-        db.save_word(word)
-        print(f"Quick added word: {word.dutch}")
+        db_row_id, anki_note_id = save_and_sync_word(word, db=db)
+        logger.info(f"Quick added word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
 
         return jsonify({
             'success': True,
@@ -188,7 +193,7 @@ def quick_add_word():
             }
         })
     except Exception as e:
-        print(f"Error in quick add: {e}")
+        logger.error(f"Error in quick add: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/stats', methods=['GET'])
@@ -228,9 +233,9 @@ def update_word(dutch):
     # Create Word object
     word = Word(**word_data)
 
-    # Save to database
-    db.save_word(word)
-    print(f"Updated word: {word.dutch}")
+    # Save to database and sync to Anki
+    db_row_id, anki_note_id = save_and_sync_word(word, db=db)
+    logger.info(f"Updated word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
 
     return redirect(url_for('index'))
 
@@ -284,7 +289,7 @@ def regenerate_word(dutch):
             }
         })
     except Exception as e:
-        print(f"Error regenerating word: {e}")
+        logger.error(f"Error regenerating word: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/confirm-regenerate/<path:dutch>', methods=['POST'])
@@ -293,15 +298,21 @@ def confirm_regenerate(dutch):
     try:
         word_data = request.json
         word = Word(**word_data)
-        db.save_word(word)
-        print(f"Confirmed regenerated word: {word.dutch}")
+        db_row_id, anki_note_id = save_and_sync_word(word, db=db)
+        logger.info(f"Confirmed regenerated word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
         return jsonify({'success': True})
     except Exception as e:
-        print(f"Error saving regenerated word: {e}")
+        logger.error(f"Error saving regenerated word: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def main():
     """CLI entry point for the word viewer."""
+    # Configure logging for the viewer
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+
     print("Starting Anki GPT Word Viewer...")
     print("Open http://127.0.0.1:5000 in your browser")
     app.run(debug=True, host='127.0.0.1', port=5000)

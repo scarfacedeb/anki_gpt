@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from chatgpt import get_definitions
-from anki import add_notes, sync_anki
+from anki import sync_anki
 from word import Word, WordList
-from db import WordDatabase
+from word_sync import save_and_sync_words
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,27 +11,19 @@ def add_word_to_anki(user_input: str) -> list[Word]:
     """
     Main logic:
     1. Send user input to ChatGPT for definitions.
-    2. Save words to database.
-    3. Add new words to Anki.
-    4. Mark words as synced in database.
-    5. Return the definitions as Word objects.
+    2. Save words to database and sync to Anki.
+    3. Sync with AnkiWeb.
+    4. Return the definitions as Word objects.
     """
 
     response = get_definitions(user_input, user_id=0)  # Default user ID for CLI
 
     if response.words:
-        # Save words to database first
-        db = WordDatabase()
-        db.save_words(response.words)
+        # Save words to database and sync to Anki
+        total_saved, total_synced = save_and_sync_words(response.words)
+        print(f"Saved {total_saved}/{len(response.words)} words, synced {total_synced}/{len(response.words)} to Anki")
 
-        # Then add to Anki
-        results = add_notes(response.words)
-
-        # Mark words as synced in database
-        for word, note_id in results:
-            if note_id:
-                db.mark_synced(word.dutch, note_id)
-
+        # Sync with AnkiWeb
         sync_anki()
 
     return response.words
