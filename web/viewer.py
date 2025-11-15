@@ -11,11 +11,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from dotenv import load_dotenv
 from urllib.parse import urlencode
-from db import WordDatabase
 from word import Word
 from chatgpt import get_definitions
 from user_settings import UserConfig, set_user_config
-from word_sync import save_and_sync_word
+from word_service import WordService
 
 # Load environment variables
 load_dotenv()
@@ -24,7 +23,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-db = WordDatabase()
+word_service = WordService()
 
 # Set up better model for web interface regeneration (user_id=0)
 WEB_USER_ID = 0
@@ -65,7 +64,7 @@ def get_words_with_timestamps(query=None):
 
         rows = cursor.fetchall()
         for row in rows:
-            word = db._dict_to_word(dict(row))
+            word = word_service.db._dict_to_word(dict(row))
             created_at = row['created_at']
             updated_at = row['updated_at']
             words_data.append((word, created_at, updated_at))
@@ -117,7 +116,7 @@ def index():
         else:
             page_range = [page - 1, page, page + 1]
 
-    stats = db.get_stats()
+    stats = word_service.get_stats()
 
     return render_template(
         'index.html',
@@ -139,7 +138,7 @@ def index():
 @app.route('/delete/<path:dutch>', methods=['POST'])
 def delete_word(dutch):
     """Delete a word from the database."""
-    success = db.delete_word(dutch)
+    success = word_service.delete(dutch)
     if success:
         logger.info(f"Deleted word: {dutch}")
     else:
@@ -148,7 +147,7 @@ def delete_word(dutch):
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax'):
         if success:
-            stats = db.get_stats()
+            stats = word_service.get_stats()
             return jsonify({'success': True, 'stats': stats})
         else:
             return jsonify({'success': False, 'error': 'Failed to delete word'}), 400
@@ -167,8 +166,7 @@ def quick_add_word():
             return jsonify({'success': False, 'error': 'No word provided'}), 400
 
         # Check if word already exists
-        existing_word = db.get_word(dutch)
-        if existing_word:
+        if word_service.exists(dutch):
             return jsonify({'success': False, 'error': f'Word "{dutch}" already exists in database'}), 400
 
         # Generate word data using ChatGPT (uses gpt-5-mini with medium effort)
@@ -179,8 +177,8 @@ def quick_add_word():
 
         # Save the first word (usually there's only one)
         word = result.words[0]
-        db_row_id, anki_note_id = save_and_sync_word(word, db=db)
-        logger.info(f"Quick added word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
+        _, synced = word_service.create(word)
+        logger.info(f"Quick added word: {word.dutch} (synced: {synced})")
 
         return jsonify({
             'success': True,
@@ -199,13 +197,13 @@ def quick_add_word():
 @app.route('/api/stats', methods=['GET'])
 def get_stats_api():
     """Get database statistics as JSON."""
-    stats = db.get_stats()
+    stats = word_service.get_stats()
     return jsonify(stats)
 
 @app.route('/edit/<path:dutch>', methods=['GET'])
 def edit_word(dutch):
     """Show edit form for a word."""
-    word = db.get_word(dutch)
+    word = word_service.get(dutch)
     if not word:
         return redirect(url_for('index'))
 
@@ -234,8 +232,8 @@ def update_word(dutch):
     word = Word(**word_data)
 
     # Save to database and sync to Anki
-    db_row_id, anki_note_id = save_and_sync_word(word, db=db)
-    logger.info(f"Updated word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
+    _, synced = word_service.update(word)
+    logger.info(f"Updated word: {word.dutch} (synced: {synced})")
 
     return redirect(url_for('index'))
 
@@ -244,7 +242,7 @@ def regenerate_word(dutch):
     """Regenerate a word using ChatGPT with gpt-5-mini and medium effort."""
     try:
         # Get the current word
-        current_word = db.get_word(dutch)
+        current_word = word_service.get(dutch)
         if not current_word:
             return jsonify({'success': False, 'error': 'Word not found'}), 404
 
@@ -298,8 +296,8 @@ def confirm_regenerate(dutch):
     try:
         word_data = request.json
         word = Word(**word_data)
-        db_row_id, anki_note_id = save_and_sync_word(word, db=db)
-        logger.info(f"Confirmed regenerated word: {word.dutch} (db_id: {db_row_id}, anki_id: {anki_note_id})")
+        _, synced = word_service.update(word)
+        logger.info(f"Confirmed regenerated word: {word.dutch} (synced: {synced})")
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Error saving regenerated word: {e}", exc_info=True)

@@ -9,7 +9,7 @@ from chatgpt import get_definitions
 from anki import sync_anki
 from word import Word, word_to_html, WordList
 from user_settings import get_user_config, set_user_model, set_user_effort, ALLOWED_MODELS, ALLOWED_EFFORTS
-from word_sync import save_and_sync_words
+from word_service import WordService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,8 +35,10 @@ def authorized(func):
 
 async def save_sync_and_web_sync(words):
     """Save to DB, sync to Anki, and sync with AnkiWeb asynchronously."""
+    word_service = WordService()
+
     # Save to database and sync to Anki
-    await asyncio.to_thread(save_and_sync_words, words)
+    await asyncio.to_thread(word_service.create_many, words)
 
     # Sync with AnkiWeb
     await asyncio.to_thread(sync_anki)
