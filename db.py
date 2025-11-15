@@ -45,6 +45,11 @@ class WordDatabase:
                     synced_at TIMESTAMP,
                     last_updated_at TIMESTAMP,
                     sync_count INTEGER DEFAULT 0,
+                    reviews INTEGER,
+                    lapses INTEGER,
+                    ease_factor INTEGER,
+                    interval INTEGER,
+                    due INTEGER,
                     FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE,
                     UNIQUE(word_id)
                 )
@@ -60,6 +65,7 @@ class WordDatabase:
 
             # Migrate legacy data if old columns exist
             self._migrate_legacy_anki_data(conn)
+            self._migrate_add_anki_stats_columns(conn)
 
     def _migrate_legacy_anki_data(self, conn):
         """Migrate data from legacy synced_to_anki and anki_note_id columns to anki_words table."""
@@ -85,6 +91,29 @@ class WordDatabase:
 
             # Note: We don't drop the old columns to maintain backward compatibility
             # They can be manually dropped later if needed
+
+    def _migrate_add_anki_stats_columns(self, conn):
+        """Add Anki statistics columns to anki_words table if they don't exist."""
+        cursor = conn.cursor()
+
+        # Check which columns exist in anki_words table
+        cursor.execute("PRAGMA table_info(anki_words)")
+        existing_columns = {col[1] for col in cursor.fetchall()}
+
+        # Add missing columns
+        columns_to_add = {
+            'reviews': 'INTEGER',
+            'lapses': 'INTEGER',
+            'ease_factor': 'INTEGER',
+            'interval': 'INTEGER',
+            'due': 'INTEGER'
+        }
+
+        for column_name, column_type in columns_to_add.items():
+            if column_name not in existing_columns:
+                cursor.execute(f"ALTER TABLE anki_words ADD COLUMN {column_name} {column_type}")
+
+        conn.commit()
 
     def _word_to_dict(self, word: Word) -> dict:
         """Convert Word object to dictionary for database storage."""
