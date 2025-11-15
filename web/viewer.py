@@ -228,6 +228,67 @@ def get_stats_api():
     stats = word_service.get_stats()
     return jsonify(stats)
 
+import threading
+
+# Global sync status with thread lock
+sync_status_lock = threading.Lock()
+sync_status = {
+    'in_progress': False,
+    'last_result': None
+}
+
+def run_sync_in_background():
+    """Run sync in background thread."""
+    try:
+        result = word_service.sync_all_to_anki()
+
+        with sync_status_lock:
+            sync_status['last_result'] = result
+
+        logger.info(f"Background sync completed: {result}")
+    except Exception as e:
+        logger.error(f"Background sync failed: {e}", exc_info=True)
+
+        with sync_status_lock:
+            sync_status['last_result'] = {
+                'success': False,
+                'error': str(e)
+            }
+    finally:
+        with sync_status_lock:
+            sync_status['in_progress'] = False
+
+@app.route('/api/sync', methods=['POST'])
+def sync_anki_api():
+    """Start async sync of all database words to Anki."""
+    with sync_status_lock:
+        if sync_status['in_progress']:
+            return jsonify({
+                'success': False,
+                'error': 'Sync already in progress'
+            }), 409
+
+        # Mark as in progress before starting thread
+        sync_status['in_progress'] = True
+
+    # Start sync in background thread (outside lock to avoid blocking)
+    sync_thread = threading.Thread(target=run_sync_in_background, daemon=True)
+    sync_thread.start()
+
+    return jsonify({
+        'success': True,
+        'message': 'Sync started in background'
+    })
+
+@app.route('/api/sync/status', methods=['GET'])
+def sync_status_api():
+    """Get current sync status."""
+    with sync_status_lock:
+        return jsonify({
+            'in_progress': sync_status['in_progress'],
+            'last_result': sync_status['last_result']
+        })
+
 @app.route('/edit/<path:dutch>', methods=['GET'])
 def edit_word(dutch):
     """Show edit form for a word."""

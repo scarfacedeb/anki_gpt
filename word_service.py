@@ -336,6 +336,99 @@ class WordService:
         self.db.mark_synced(dutch, anki_note_id)
         logger.info(f"Marked word as synced: {dutch}")
 
+    def sync_all_to_anki(self) -> dict:
+        """
+        Sync all database words to Anki, then sync with AnkiWeb.
+
+        Uses the database as the source of truth - all words in the database
+        will be added or updated in Anki.
+
+        Returns:
+            Dictionary with sync results:
+            - success: True if sync completed (even with some failures)
+            - synced: Number of words successfully synced
+            - failed: Number of words that failed to sync
+            - total: Total number of words processed
+            - error: Error message if sync failed completely (optional)
+        """
+        if not ENABLE_ANKI_SYNC:
+            logger.info("Anki sync disabled, skipping")
+            return {
+                'success': True,
+                'synced': 0,
+                'failed': 0,
+                'total': 0,
+                'skipped': True
+            }
+
+        try:
+            from anki import sync_anki
+
+            # Get all words from database (source of truth)
+            all_words = self.get_all()
+
+            logger.info(f"Starting sync of {len(all_words)} words to Anki...")
+
+            synced_count = 0
+            failed_count = 0
+
+            # Sync each word to Anki
+            for word in all_words:
+                try:
+                    # Check if we already have an anki_note_id for this word
+                    sync_info = self.db.get_sync_info(word.dutch)
+                    existing_note_id = sync_info.get('anki_note_id') if sync_info else None
+
+                    if existing_note_id:
+                        # Word already has a note ID - update it directly
+                        from anki import update_note_by_id
+                        success = update_note_by_id(existing_note_id, word, self.deck_name)
+                        if success:
+                            # Update the sync timestamp
+                            self.db.mark_synced(word.dutch, existing_note_id, self.deck_name)
+                            synced_count += 1
+                        else:
+                            failed_count += 1
+                            logger.warning(f"Failed to update existing note for: {word.dutch}")
+                    else:
+                        # No note ID in database - use normal add/update flow
+                        anki_note_id = self._sync_word_to_anki(word)
+
+                        if anki_note_id:
+                            # Mark as synced in database
+                            self.db.mark_synced(word.dutch, anki_note_id, self.deck_name)
+                            synced_count += 1
+                        else:
+                            failed_count += 1
+                            logger.warning(f"Failed to sync word to Anki: {word.dutch}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Error syncing word {word.dutch}: {e}")
+
+            logger.info(f"Synced {synced_count}/{len(all_words)} words to Anki ({failed_count} failed)")
+
+            # Sync with AnkiWeb
+            sync_result = sync_anki()
+
+            if sync_result and sync_result.get('error'):
+                logger.warning(f"AnkiWeb sync warning: {sync_result['error']}")
+
+            return {
+                'success': True,
+                'synced': synced_count,
+                'failed': failed_count,
+                'total': len(all_words)
+            }
+        except Exception as e:
+            logger.error(f"Error during sync: {e}", exc_info=True)
+            return {
+                'success': False,
+                'synced': 0,
+                'failed': 0,
+                'total': 0,
+                'error': str(e)
+            }
+
     # ==================== Context Manager ====================
 
     def __enter__(self):

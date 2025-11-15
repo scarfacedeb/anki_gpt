@@ -74,6 +74,38 @@ def update_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
         logger.error(f"Could not find note to update for: {word.dutch}")
         return None
 
+def update_note_by_id(note_id: int, word: Word, deck_name: str = DECK_NAME) -> bool:
+    """
+    Updates an existing note in Anki by note ID.
+    Returns True if successful, False otherwise.
+    """
+    if not note_id:
+        logger.warning("Cannot update note: No note ID provided")
+        return False
+
+    update_payload = {
+        "action": "updateNoteFields",
+        "version": 6,
+        "params": {
+            "note": {
+                "id": note_id,
+                "fields": build_note(word, deck_name)["fields"]
+            }
+        }
+    }
+
+    try:
+        update_response = requests.post(ANKI_CONNECT_URL, json=update_payload, timeout=5).json()
+        if update_response.get("error"):
+            logger.error(f"Error updating note {note_id}: {update_response['error']}")
+            return False
+        else:
+            logger.info(f"Note updated successfully: {word.dutch} (note_id: {note_id})")
+            return True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error to AnkiConnect while updating note: {e}")
+        return False
+
 def add_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
     Adds the given word to Anki via the AnkiConnect API.

@@ -48,7 +48,10 @@
                 {% endif %}
             </div>
         </div>
-        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="theme-toggle" onclick="syncAnki()" id="syncButton">🔄 Sync Anki</button>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+        </div>
     </header>
 
     <div class="search-sort-wrapper">
@@ -337,6 +340,90 @@
             urlParams.set('order', order);
             urlParams.delete('page');  // Reset to page 1 when sorting changes
             window.location.search = urlParams.toString();
+        }
+
+        async function syncAnki() {
+            const btn = document.getElementById('syncButton');
+            const originalText = btn.textContent;
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Starting...';
+
+            try {
+                // Start sync
+                const response = await fetch('/api/sync', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    btn.textContent = '❌ Failed';
+                    console.error('Sync failed:', data.error);
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                    return;
+                }
+
+                // Sync started - poll for status
+                btn.textContent = '⏳ Syncing...';
+                pollSyncStatus(btn, originalText);
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                btn.textContent = '❌ Error';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        async function pollSyncStatus(btn, originalText) {
+            try {
+                const response = await fetch('/api/sync/status');
+                const status = await response.json();
+
+                if (status.in_progress) {
+                    // Still syncing - check again in 1 second
+                    setTimeout(() => pollSyncStatus(btn, originalText), 1000);
+                } else if (status.last_result) {
+                    // Sync completed
+                    const result = status.last_result;
+
+                    if (result.success) {
+                        const message = `✅ ${result.synced}/${result.total}`;
+                        btn.textContent = message;
+
+                        if (result.failed > 0) {
+                            console.warn(`${result.failed} words failed to sync`);
+                        }
+
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                            // Reload page to show updated sync stats
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        btn.textContent = '❌ Failed';
+                        console.error('Sync failed:', result.error);
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('Status polling error:', error);
+                btn.textContent = '❌ Error';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
         }
     </script>
 </body>
