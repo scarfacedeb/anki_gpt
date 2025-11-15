@@ -33,23 +33,9 @@ def authorized(func):
     return wrapper
 
 
-async def save_sync_and_web_sync(words):
-    """Save to DB, sync to Anki, and sync with AnkiWeb asynchronously."""
-    word_service = WordService()
-
-    # Save to database and sync to Anki
-    await asyncio.to_thread(word_service.create_many, words)
-
-    # Sync with AnkiWeb
-    await asyncio.to_thread(sync_anki)
-
-def add_word_to_anki(user_input: str, user_id: int) -> WordList:
+def generate_word(user_input: str, user_id: int) -> WordList:
+    """Generate word definitions using ChatGPT without saving."""
     response = get_definitions(user_input.lower(), user_id)
-
-    if response.words:
-        # Save to database and sync to Anki asynchronously
-        asyncio.create_task(save_sync_and_web_sync(response.words))
-
     return response
 
 @authorized
@@ -125,20 +111,38 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @authorized
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_input = update.message.text.strip()
+    user_input = update.message.text.strip().lower()
     user_id = update.effective_user.id
 
-    response = add_word_to_anki(user_input, user_id)
+    word_service = WordService()
+
+    # Check if word already exists in database
+    existing_word = await asyncio.to_thread(word_service.get, user_input)
+
+    if existing_word:
+        # Word found in database - show it without GPT call
+        response_text = word_to_html(existing_word)
+        await update.message.reply_html(f"📖 Found in database:\n\n{response_text}")
+        return
+
+    # Word not found - generate with GPT
+    response = generate_word(user_input, user_id)
 
     if response.context:
         await update.message.reply_text(response.context)
 
-    if response.words:
-        for w in response.words:
-            response_text = word_to_html(w)
-            await update.message.reply_html(response_text)
-    else:
+    if not response.words:
         await update.message.reply_text("No words found or could not parse.")
+        return
+
+    # Save new words
+    for new_word in response.words:
+        await asyncio.to_thread(word_service.create, new_word)
+        response_text = word_to_html(new_word)
+        await update.message.reply_html(f"✅ Added:\n\n{response_text}")
+
+    # Sync with AnkiWeb after processing all words
+    await asyncio.to_thread(sync_anki)
 
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
