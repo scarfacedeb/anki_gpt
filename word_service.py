@@ -17,7 +17,8 @@ import logging
 from typing import Optional, List
 from word import Word
 from db import WordDatabase
-from word_sync import save_and_sync_word, save_and_sync_words
+from anki import delete_note, add_note
+from config import ENABLE_ANKI_SYNC
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,63 @@ class WordService:
         self.deck_name = deck_name
         logger.debug(f"WordService initialized with deck: {deck_name}")
 
+    # ==================== Private Sync Methods ====================
+
+    def _sync_word_to_anki(self, word: Word) -> Optional[int]:
+        """
+        Sync a single word to Anki.
+
+        Args:
+            word: The Word object to sync
+
+        Returns:
+            The Anki note ID if successful, None otherwise
+        """
+        if not ENABLE_ANKI_SYNC:
+            return None
+
+        try:
+            note_id = add_note(word, self.deck_name)
+            if note_id:
+                logger.info(f"Successfully synced word to Anki: {word.dutch} (note_id: {note_id})")
+            else:
+                logger.warning(f"Failed to sync word to Anki: {word.dutch}")
+            return note_id
+        except Exception as e:
+            logger.error(f"Error syncing word to Anki: {word.dutch} - {e}")
+            return None
+
+    def _save_and_sync_word(self, word: Word) -> tuple[int, Optional[int]]:
+        """
+        Save a word to the database and sync it to Anki.
+
+        Args:
+            word: The Word object to save and sync
+
+        Returns:
+            Tuple of (db_row_id, anki_note_id)
+        """
+        # Step 1: Save to database
+        try:
+            db_row_id = self.db.save_word(word)
+            logger.info(f"Saved word to database: {word.dutch} (row_id: {db_row_id})")
+        except Exception as e:
+            logger.error(f"Failed to save word to database: {word.dutch} - {e}")
+            raise
+
+        # Step 2: Sync to Anki
+        anki_note_id = self._sync_word_to_anki(word)
+
+        # Step 3: Mark as synced if Anki sync was successful
+        if anki_note_id:
+            try:
+                self.db.mark_synced(word.dutch, anki_note_id, self.deck_name)
+                logger.info(f"Marked word as synced: {word.dutch}")
+            except Exception as e:
+                logger.error(f"Failed to mark word as synced: {word.dutch} - {e}")
+
+        return (db_row_id, anki_note_id)
+
     # ==================== CRUD Operations ====================
 
     def create(self, word: Word) -> tuple[Word, bool]:
@@ -59,7 +117,7 @@ class WordService:
         Raises:
             Exception: If database save fails
         """
-        db_row_id, anki_note_id = save_and_sync_word(word, self.deck_name, self.db)
+        db_row_id, anki_note_id = self._save_and_sync_word(word)
         synced = anki_note_id is not None
 
         logger.info(f"Created word: {word.dutch} (synced: {synced})")
@@ -98,7 +156,7 @@ class WordService:
         Note:
             This will create the word if it doesn't exist.
         """
-        db_row_id, anki_note_id = save_and_sync_word(word, self.deck_name, self.db)
+        db_row_id, anki_note_id = self._save_and_sync_word(word)
         synced = anki_note_id is not None
 
         logger.info(f"Updated word: {word.dutch} (synced: {synced})")
@@ -121,26 +179,46 @@ class WordService:
             logger.debug(f"Word not found: {dutch}")
         return word
 
-    def delete(self, dutch: str) -> bool:
+    def delete(self, dutch: str, delete_from_anki: bool = True) -> tuple[bool, bool]:
         """
-        Delete a word from the database.
+        Delete a word from the database and optionally from Anki.
 
         Args:
             dutch: The Dutch word to delete
+            delete_from_anki: If True, also delete from Anki (default: True)
 
         Returns:
-            True if deleted, False if not found
+            Tuple of (deleted_from_db, deleted_from_anki)
+            - deleted_from_db: True if deleted from database
+            - deleted_from_anki: True if deleted from Anki (or N/A if not synced)
 
         Note:
-            This only deletes from the database, not from Anki.
-            The word will remain in Anki for review.
+            If the word was synced to Anki and delete_from_anki is True,
+            it will be removed from both the database and Anki.
         """
-        success = self.db.delete_word(dutch)
-        if success:
-            logger.info(f"Deleted word: {dutch}")
-        else:
+        # Get sync info before deleting from DB
+        sync_info = self.db.get_sync_info(dutch)
+        anki_note_id = sync_info.get('anki_note_id') if sync_info else None
+
+        # Delete from database (this also deletes from anki_words via CASCADE)
+        db_deleted = self.db.delete_word(dutch)
+
+        if not db_deleted:
             logger.warning(f"Word not found for deletion: {dutch}")
-        return success
+            return False, False
+
+        logger.info(f"Deleted word from database: {dutch}")
+
+        # Delete from Anki if it was synced and deletion is enabled
+        anki_deleted = None  # Default: N/A (not synced or sync disabled)
+        if delete_from_anki and anki_note_id and ENABLE_ANKI_SYNC:
+            anki_deleted = delete_note(anki_note_id)
+            if anki_deleted:
+                logger.info(f"Deleted word from Anki: {dutch} (note_id: {anki_note_id})")
+            else:
+                logger.warning(f"Failed to delete word from Anki: {dutch}")
+
+        return db_deleted, anki_deleted
 
     def exists(self, dutch: str) -> bool:
         """
@@ -166,7 +244,18 @@ class WordService:
         Returns:
             Tuple of (total_saved, total_synced)
         """
-        total_saved, total_synced = save_and_sync_words(words, self.deck_name, self.db)
+        total_saved = 0
+        total_synced = 0
+
+        for word in words:
+            try:
+                db_row_id, anki_note_id = self._save_and_sync_word(word)
+                total_saved += 1
+                if anki_note_id:
+                    total_synced += 1
+            except Exception as e:
+                logger.error(f"Failed to save and sync word: {word.dutch} - {e}")
+
         logger.info(f"Batch create: {total_saved}/{len(words)} saved, {total_synced}/{len(words)} synced")
         return total_saved, total_synced
 

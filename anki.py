@@ -107,12 +107,42 @@ def add_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
         logger.error(f"Connection error to AnkiConnect: {e}")
         return None
 
+def delete_note(anki_note_id: int) -> bool:
+    """
+    Delete a note from Anki by its note ID.
+    Returns True if successful, False otherwise.
+    """
+    if not anki_note_id:
+        logger.warning("Cannot delete note: No note ID provided")
+        return False
+
+    payload = {
+        "action": "deleteNotes",
+        "version": 6,
+        "params": {
+            "notes": [anki_note_id]
+        }
+    }
+
+    try:
+        response = requests.post(ANKI_CONNECT_URL, json=payload, timeout=5).json()
+
+        if response.get("error"):
+            logger.error(f"Error deleting note {anki_note_id}: {response['error']}")
+            return False
+        else:
+            logger.info(f"Note deleted successfully: {anki_note_id}")
+            return True
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error to AnkiConnect while deleting note: {e}")
+        return False
+
 def sync_anki() -> None:
     """
     Sync collections with AnkiWeb.
     """
     if not ENABLE_ANKI_SYNC:
-        logger.info("Anki sync is disabled via config (ENABLE_ANKI_SYNC=false)")
         return {"result": None, "sync_skipped": True}
 
     payload = {

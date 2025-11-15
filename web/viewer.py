@@ -137,18 +137,23 @@ def index():
 
 @app.route('/delete/<path:dutch>', methods=['POST'])
 def delete_word(dutch):
-    """Delete a word from the database."""
-    success = word_service.delete(dutch)
-    if success:
-        logger.info(f"Deleted word: {dutch}")
+    """Delete a word from the database and Anki."""
+    db_deleted, anki_deleted = word_service.delete(dutch)
+
+    if db_deleted:
+        logger.info(f"Deleted word from database: {dutch} (Anki: {anki_deleted})")
     else:
         logger.warning(f"Failed to delete word: {dutch}")
 
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax'):
-        if success:
+        if db_deleted:
             stats = word_service.get_stats()
-            return jsonify({'success': True, 'stats': stats})
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'deleted_from_anki': anki_deleted
+            })
         else:
             return jsonify({'success': False, 'error': 'Failed to delete word'}), 400
 
