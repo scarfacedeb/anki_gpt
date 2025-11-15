@@ -151,6 +151,52 @@ def delete_word(dutch):
     # Regular form submission - redirect
     return redirect(url_for('index'))
 
+@app.route('/quick-add', methods=['POST'])
+def quick_add_word():
+    """Quick add a new word using ChatGPT."""
+    try:
+        data = request.json
+        dutch = data.get('dutch', '').strip()
+
+        if not dutch:
+            return jsonify({'success': False, 'error': 'No word provided'}), 400
+
+        # Check if word already exists
+        existing_word = db.get_word(dutch)
+        if existing_word:
+            return jsonify({'success': False, 'error': f'Word "{dutch}" already exists in database'}), 400
+
+        # Generate word data using ChatGPT (uses gpt-5-mini with medium effort)
+        result = get_definitions(dutch, user_id=WEB_USER_ID)
+
+        if not result.words or len(result.words) == 0:
+            return jsonify({'success': False, 'error': 'Failed to generate word data'}), 500
+
+        # Save the first word (usually there's only one)
+        word = result.words[0]
+        db.save_word(word)
+        print(f"Quick added word: {word.dutch}")
+
+        return jsonify({
+            'success': True,
+            'word': word.dutch,
+            'word_data': {
+                'dutch': word.dutch,
+                'translation': word.translation,
+                'grammar': word.grammar,
+                'pronunciation': word.pronunciation
+            }
+        })
+    except Exception as e:
+        print(f"Error in quick add: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats_api():
+    """Get database statistics as JSON."""
+    stats = db.get_stats()
+    return jsonify(stats)
+
 @app.route('/edit/<path:dutch>', methods=['GET'])
 def edit_word(dutch):
     """Show edit form for a word."""

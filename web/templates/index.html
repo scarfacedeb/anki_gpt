@@ -62,6 +62,16 @@
             <button type="submit">Search</button>
         </form>
 
+        <div class="quick-add-container">
+            <input
+                type="text"
+                id="quickAddInput"
+                placeholder="Add new word..."
+                onkeypress="if(event.key === 'Enter') quickAddWord()"
+            >
+            <button onclick="quickAddWord()" class="btn btn-add">+</button>
+        </div>
+
         <div class="sort-controls">
             <label>Sort:</label>
             <select id="sort-combined" onchange="updateSort()">
@@ -76,6 +86,8 @@
             </select>
         </div>
     </div>
+
+    <div id="quickAddFeedback" class="quick-add-feedback"></div>
 
     {% if words_data %}
     <!-- Pagination Top (only show from page 2 onwards) -->

@@ -78,6 +78,135 @@ async function deleteWord(dutch, cardElement) {
     }
 }
 
+// Quick add word - track ongoing additions
+const pendingAdditions = new Map(); // word -> status
+
+async function quickAddWord() {
+    const input = document.getElementById('quickAddInput');
+    const dutch = input.value.trim();
+
+    if (!dutch) {
+        return;
+    }
+
+    // Check if already being added
+    if (pendingAdditions.has(dutch)) {
+        input.value = '';
+        return;
+    }
+
+    // Add to pending list and clear input immediately
+    pendingAdditions.set(dutch, 'pending');
+    input.value = '';
+    input.focus();
+    updateFeedback();
+
+    try {
+        const response = await fetch('/quick-add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ dutch })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            pendingAdditions.set(dutch, 'success');
+            updateFeedback();
+
+            // Add word to the list dynamically
+            await addWordToList(data.word_data);
+
+            // Remove from pending after a short delay
+            setTimeout(() => {
+                pendingAdditions.delete(dutch);
+                updateFeedback();
+            }, 2000);
+        } else {
+            pendingAdditions.set(dutch, 'error: ' + (data.error || 'Unknown error'));
+            updateFeedback();
+
+            // Remove from pending after showing error
+            setTimeout(() => {
+                pendingAdditions.delete(dutch);
+                updateFeedback();
+            }, 4000);
+        }
+    } catch (error) {
+        console.error('Error adding word:', error);
+        pendingAdditions.set(dutch, 'error: Network error');
+        updateFeedback();
+
+        setTimeout(() => {
+            pendingAdditions.delete(dutch);
+            updateFeedback();
+        }, 4000);
+    }
+}
+
+function updateFeedback() {
+    const feedback = document.getElementById('quickAddFeedback');
+
+    if (pendingAdditions.size === 0) {
+        feedback.style.display = 'none';
+        return;
+    }
+
+    const items = [];
+    for (const [word, status] of pendingAdditions) {
+        if (status === 'pending') {
+            items.push(`⏳ ${word}`);
+        } else if (status === 'success') {
+            items.push(`✓ ${word}`);
+        } else if (status.startsWith('error:')) {
+            items.push(`✗ ${word}: ${status.substring(7)}`);
+        }
+    }
+
+    feedback.textContent = items.join(' • ');
+
+    // Determine overall status for styling
+    const hasError = Array.from(pendingAdditions.values()).some(s => s.startsWith('error:'));
+    const hasSuccess = Array.from(pendingAdditions.values()).some(s => s === 'success');
+    const hasPending = Array.from(pendingAdditions.values()).some(s => s === 'pending');
+
+    if (hasError) {
+        feedback.className = 'quick-add-feedback error';
+    } else if (hasPending) {
+        feedback.className = 'quick-add-feedback loading';
+    } else if (hasSuccess) {
+        feedback.className = 'quick-add-feedback success';
+    }
+
+    feedback.style.display = 'block';
+}
+
+async function addWordToList(wordData) {
+    // Refresh the page data to get the new word with proper timestamp
+    // This is simpler than constructing the HTML manually
+    const wordList = document.querySelector('.word-list');
+    if (!wordList) return;
+
+    // For now, we'll just update the stats
+    try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+
+        if (stats) {
+            const statsElement = document.querySelector('.stats');
+            if (statsElement) {
+                const showingMatch = statsElement.textContent.match(/\| Showing .+$/);
+                const showingText = showingMatch ? showingMatch[0] : '';
+                statsElement.textContent = `Total words: ${stats.total_words} | Synced to Anki: ${stats.synced_to_anki} | Unsynced: ${stats.unsynced}${showingText}`;
+            }
+        }
+    } catch (error) {
+        console.error('Error updating stats:', error);
+    }
+}
+
 // Regenerate word
 let currentRegeneratedData = null;
 

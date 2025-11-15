@@ -212,6 +212,107 @@ h1 {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Quick Add Styles */
+.quick-add-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.quick-add-container input[type="text"] {
+    width: 200px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-medium);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.quick-add-container input[type="text"]::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.quick-add-container input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.quick-add-container input[type="text"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-add {
+    padding: 10px 14px;
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    line-height: 1;
+    min-width: 38px;
+}
+
+.btn-add:hover:not(:disabled) {
+    background: var(--accent-blue-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.btn-add:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.quick-add-feedback {
+    display: none;
+    margin-bottom: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    animation: slideDown 0.3s ease;
+    text-align: center;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.quick-add-feedback.loading {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-medium);
+}
+
+.quick-add-feedback.success {
+    background: #10b981;
+    color: white;
+    border: 1px solid #059669;
+}
+
+.quick-add-feedback.error {
+    background: var(--accent-red);
+    color: white;
+    border: 1px solid var(--accent-red-dark);
+}
+
 .word-list {
     background: var(--bg-secondary);
     border-radius: 12px;
@@ -744,6 +845,17 @@ a:hover {
         right: 15px;
         padding: 6px 12px;
         font-size: 13px;
+    }
+
+    .quick-add-container {
+        order: 3;
+        width: 100%;
+    }
+
+    .quick-add-container input[type="text"] {
+        flex: 1;
+        width: auto;
+        font-size: 16px; /* Prevents zoom on iOS */
     }
 
     .search-sort-wrapper {
