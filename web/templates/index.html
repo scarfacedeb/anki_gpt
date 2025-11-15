@@ -120,11 +120,14 @@
     {% endif %}
 
     <div class="word-list">
-        {% for word, created_at, updated_at in words_data %}
+        {% for word, created_at, updated_at, anki_info in words_data %}
         <div class="word-card">
             <div class="word-summary" onclick="toggleDetails(this)">
                 <div class="word-dutch">
                     {{ word.dutch }}
+                    {% if not anki_info.synced %}
+                        <span style="font-size: 11px; color: #f59e0b; margin-left: 6px;">⚠ Not synced</span>
+                    {% endif %}
                     <div style="font-size: 11px; color: var(--text-dim); font-weight: normal; margin-top: 2px;">
                         {{ updated_at[:10] if updated_at else '' }}
                     </div>
@@ -194,6 +197,58 @@
                     <div class="word-content">{{ word.etymology }}</div>
                 </div>
                 {% endif %}
+
+                <div class="word-section">
+                    <div class="word-label">Anki Sync Info</div>
+                    <div class="word-content">
+                        {% if anki_info.synced %}
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
+                                <span style="color: var(--text-dim);">Status:</span>
+                                <span style="color: #10b981; font-weight: 500;">✓ Synced to Anki</span>
+
+                                <span style="color: var(--text-dim);">Deck:</span>
+                                <span>{{ anki_info.deck_name or 'Default' }}</span>
+
+                                {% if anki_info.synced_at %}
+                                <span style="color: var(--text-dim);">Last synced:</span>
+                                <span>{{ anki_info.synced_at[:19] }}</span>
+                                {% endif %}
+
+                                {% if anki_info.sync_count %}
+                                <span style="color: var(--text-dim);">Sync count:</span>
+                                <span>{{ anki_info.sync_count }}</span>
+                                {% endif %}
+
+                                {% if anki_info.reviews is not none %}
+                                <span style="color: var(--text-dim);">Reviews:</span>
+                                <span>{{ anki_info.reviews }}</span>
+                                {% endif %}
+
+                                {% if anki_info.lapses is not none %}
+                                <span style="color: var(--text-dim);">Lapses:</span>
+                                <span>{{ anki_info.lapses }}</span>
+                                {% endif %}
+
+                                {% if anki_info.ease_factor is not none %}
+                                <span style="color: var(--text-dim);">Ease factor:</span>
+                                <span>{{ (anki_info.ease_factor / 10)|round(1) }}%</span>
+                                {% endif %}
+
+                                {% if anki_info.interval is not none %}
+                                <span style="color: var(--text-dim);">Interval:</span>
+                                <span>{{ anki_info.interval }} days</span>
+                                {% endif %}
+
+                                {% if anki_info.due is not none %}
+                                <span style="color: var(--text-dim);">Next review:</span>
+                                <span>{{ anki_info.due }}</span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span style="color: #f59e0b;">⚠ Not synced to Anki</span>
+                        {% endif %}
+                    </div>
+                </div>
 
                 <div class="word-actions">
                     <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">🔄 Regenerate</button>

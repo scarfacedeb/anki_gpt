@@ -41,7 +41,7 @@ def build_pagination_url(page, query, sort_by, order):
 app.jinja_env.globals.update(get_pagination_url=build_pagination_url)
 
 def get_words_with_timestamps(query=None):
-    """Get words with their created_at and updated_at timestamps."""
+    """Get words with their created_at, updated_at timestamps, and Anki sync info."""
     import sqlite3
     from pathlib import Path
 
@@ -55,19 +55,42 @@ def get_words_with_timestamps(query=None):
         if query:
             search_pattern = f"%{query}%"
             cursor.execute("""
-                SELECT * FROM words
-                WHERE dutch LIKE ? OR translation LIKE ?
-                   OR definition_nl LIKE ? OR definition_en LIKE ?
+                SELECT w.*, a.anki_note_id, a.deck_name, a.synced_at, a.sync_count,
+                       a.reviews, a.lapses, a.ease_factor, a.interval, a.due
+                FROM words w
+                LEFT JOIN anki_words a ON w.id = a.word_id
+                WHERE w.dutch LIKE ? OR w.translation LIKE ?
+                   OR w.definition_nl LIKE ? OR w.definition_en LIKE ?
             """, (search_pattern, search_pattern, search_pattern, search_pattern))
         else:
-            cursor.execute("SELECT * FROM words")
+            cursor.execute("""
+                SELECT w.*, a.anki_note_id, a.deck_name, a.synced_at, a.sync_count,
+                       a.reviews, a.lapses, a.ease_factor, a.interval, a.due
+                FROM words w
+                LEFT JOIN anki_words a ON w.id = a.word_id
+            """)
 
         rows = cursor.fetchall()
         for row in rows:
             word = word_service.db._dict_to_word(dict(row))
             created_at = row['created_at']
             updated_at = row['updated_at']
-            words_data.append((word, created_at, updated_at))
+
+            # Extract Anki sync info
+            anki_info = {
+                'synced': row['anki_note_id'] is not None,
+                'note_id': row['anki_note_id'],
+                'deck_name': row['deck_name'],
+                'synced_at': row['synced_at'],
+                'sync_count': row['sync_count'],
+                'reviews': row['reviews'],
+                'lapses': row['lapses'],
+                'ease_factor': row['ease_factor'],
+                'interval': row['interval'],
+                'due': row['due']
+            }
+
+            words_data.append((word, created_at, updated_at, anki_info))
 
     return words_data
 
