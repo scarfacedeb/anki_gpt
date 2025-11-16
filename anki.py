@@ -35,16 +35,32 @@ def find_note_id(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
     Finds the note id for a given word in the specified deck. Returns the note id or None.
     """
-    find_payload = {
-        "action": "findNotes",
-        "version": 6,
-        "params": {
-            "query": f"deck:'{deck_name}' Word:'{word.dutch}'"
+    try:
+        # Escape special characters for Anki search
+        # In Anki search: backslash escapes quotes, and we wrap in quotes
+        dutch_escaped = word.dutch.replace('\\', '\\\\').replace('"', '\\"')
+
+        # Use proper Anki search syntax: Field:"value"
+        find_payload = {
+            "action": "findNotes",
+            "version": 6,
+            "params": {
+                "query": f'deck:"{deck_name}" Word:"{dutch_escaped}"'
+            }
         }
-    }
-    find_response = requests.post(ANKI_CONNECT_URL, json=find_payload, timeout=5).json()
-    note_ids = find_response.get("result", [])
-    return note_ids[0] if note_ids else None
+
+        find_response = requests.post(ANKI_CONNECT_URL, json=find_payload, timeout=5).json()
+
+        if find_response.get("error"):
+            logger.error(f"Anki search error for '{word.dutch}': {find_response['error']}")
+            return None
+
+        note_ids = find_response.get("result", [])
+        return note_ids[0] if note_ids else None
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error while finding note for {word.dutch}: {e}")
+        return None
 
 def update_note(word: Word, deck_name: str = DECK_NAME) -> int | None:
     """
