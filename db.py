@@ -211,7 +211,7 @@ class WordDatabase:
                 # Update existing word
                 word_dict['updated_at'] = datetime.now().isoformat()
                 placeholders = ', '.join([f"{key} = ?" for key in word_dict.keys()])
-                values = list(word_dict.values()) + [word.dutch]
+                values = list(word_dict.values()) + [word.dutch] # original word.dutch value for WHERE clause
 
                 cursor.execute(f"""
                     UPDATE words SET {placeholders} WHERE dutch = ?
@@ -278,7 +278,6 @@ class WordDatabase:
             cursor = conn.cursor()
             timestamp = datetime.now().isoformat()
 
-            # Get word_id
             cursor.execute("SELECT id FROM words WHERE dutch = ?", (dutch,))
             row = cursor.fetchone()
             if not row:
@@ -310,7 +309,6 @@ class WordDatabase:
             timestamp = datetime.now().isoformat()
 
             for dutch, note_id in zip(words, anki_note_ids):
-                # Get word_id
                 cursor.execute("SELECT id FROM words WHERE dutch = ?", (dutch,))
                 row = cursor.fetchone()
                 if not row:
@@ -402,7 +400,7 @@ class WordDatabase:
                 FROM anki_words a
                 INNER JOIN words w ON a.word_id = w.id
                 WHERE w.dutch = ?
-            """, (dutch,))
+            """, (dutch.lower(),))
 
             row = cursor.fetchone()
             return dict(row) if row else None

@@ -186,6 +186,7 @@ def index():
 @app.route('/delete/<path:dutch>', methods=['POST'])
 def delete_word(dutch):
     """Delete a word from the database and Anki."""
+    dutch = dutch.lower() # Normalize to lowercase
     db_deleted, anki_deleted = word_service.delete(dutch)
 
     if db_deleted:
@@ -415,6 +416,7 @@ def sync_from_anki_status_api():
 @app.route('/edit/<path:dutch>', methods=['GET'])
 def edit_word(dutch):
     """Show edit form for a word."""
+    dutch = dutch.lower() # Normalize to lowercase
     word = word_service.get(dutch)
     if not word:
         return redirect(url_for('index'))
@@ -424,6 +426,7 @@ def edit_word(dutch):
 @app.route('/update/<path:dutch>', methods=['POST'])
 def update_word(dutch):
     """Update a word in the database."""
+    dutch = dutch.lower() # Normalize to lowercase
     # Get form data
     word_data = {
         'dutch': request.form.get('dutch'),
@@ -454,6 +457,7 @@ def update_word(dutch):
 @app.route('/regenerate/<path:dutch>', methods=['POST'])
 def regenerate_word(dutch):
     """Regenerate a word using ChatGPT with gpt-5-mini and medium effort."""
+    dutch = dutch.lower() # Normalize to lowercase
     try:
         # Get the current word
         current_word = word_service.get(dutch)
@@ -481,6 +485,7 @@ def regenerate_word(dutch):
 @app.route('/confirm-regenerate/<path:dutch>', methods=['POST'])
 def confirm_regenerate(dutch):
     """Confirm and save the regenerated word."""
+    dutch = dutch.lower() # Normalize to lowercase
     try:
         word_data = request.json
         word = Word(**word_data)

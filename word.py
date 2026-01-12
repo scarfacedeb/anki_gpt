@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class Word(BaseModel):
     dutch: str = Field(validation_alias="Word or phrase to define in dutch")
@@ -27,6 +27,11 @@ class Word(BaseModel):
         le=10,
         description="A score from 1 to 10 indicating how useful or important the word is to learn. 10 being most useful/important. This can consider popularity, general utility, and relevance to specific learning goals (e.g., Inburgering A2)."
     )
+
+    @field_validator('dutch')
+    @classmethod
+    def dutch_to_lower(cls, v: str) -> str:
+        return v.lower()
 
     model_config = {
         "populate_by_name": True
