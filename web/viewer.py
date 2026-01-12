@@ -124,11 +124,11 @@ def index():
         elif sort_by == 'translation':
             all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
             all_words.sort(key=lambda w: w[4])  # Priority always ascending
-        elif sort_by == 'grammar':
-            all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
-            all_words.sort(key=lambda w: w[4])  # Priority always ascending
         elif sort_by == 'created_at':
             all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
+            all_words.sort(key=lambda w: w[4])  # Priority always ascending
+        elif sort_by == 'level':
+            all_words.sort(key=lambda w: (w[0].level == '', w[0].level), reverse=reverse)
             all_words.sort(key=lambda w: w[4])  # Priority always ascending
     else:
         # Normal sorting without search priority
@@ -136,10 +136,10 @@ def index():
             all_words.sort(key=lambda w: w[0].dutch.lower(), reverse=reverse)
         elif sort_by == 'translation':
             all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
-        elif sort_by == 'grammar':
-            all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
         elif sort_by == 'created_at':
             all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
+        elif sort_by == 'level':
+            all_words.sort(key=lambda w: (w[0].level == '', w[0].level), reverse=reverse)
 
     # Pagination
     total_words = len(all_words)
