@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Prevent flash of white background */
         html {
@@ -38,7 +39,7 @@
 <body>
     <header>
         <div class="header-left">
-            <h1>📚 Anki GPT - Word Viewer</h1>
+            <h1><i data-lucide="book-open" style="width: 24px; height: 24px; vertical-align: -4px;"></i> Anki GPT - Word Viewer</h1>
             <div class="stats">
                 Total words: {{ stats.total_words }} |
                 Synced to Anki: {{ stats.synced_to_anki }} |
@@ -49,8 +50,19 @@
             </div>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
-            <a href="/settings" class="theme-toggle" style="text-decoration: none; display: inline-block;">⚙️ Settings</a>
-            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            <input
+                type="text"
+                id="quickAddInput"
+                class="header-quick-add"
+                placeholder="Add new word..."
+                onkeypress="if(event.key === 'Enter') quickAddWord()"
+            >
+            <a href="/settings" class="theme-toggle icon-only" style="text-decoration: none;" title="Settings">
+                <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+            </a>
+            <button class="theme-toggle icon-only" onclick="toggleTheme()" title="Toggle dark mode">
+                <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
     </header>
 
@@ -64,16 +76,6 @@
             >
             <button type="submit">Search</button>
         </form>
-
-        <div class="quick-add-container">
-            <input
-                type="text"
-                id="quickAddInput"
-                placeholder="Add new word..."
-                onkeypress="if(event.key === 'Enter') quickAddWord()"
-            >
-            <button onclick="quickAddWord()" class="btn btn-add">+</button>
-        </div>
 
         <div class="sort-controls">
             <label>Sort:</label>
@@ -129,7 +131,10 @@
                 <div class="word-dutch">
                     {{ word.dutch }}
                     {% if not anki_info.synced %}
-                        <span style="font-size: 11px; color: #f59e0b; margin-left: 6px;">⚠ Not synced</span>
+                        <span style="font-size: 11px; color: #f59e0b; margin-left: 6px; display: inline-flex; align-items: center; gap: 3px;">
+                            <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+                            Not synced
+                        </span>
                     {% endif %}
                     <div style="font-size: 11px; color: var(--text-dim); font-weight: normal; margin-top: 2px;">
                         {{ updated_at[:10] if updated_at else '' }}
@@ -142,7 +147,7 @@
                 </div>
                 <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
                 <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
-                    🗑️
+                    <i data-lucide="trash-2"></i>
                 </button>
             </div>
 
@@ -251,14 +256,23 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            <span style="color: #f59e0b;">⚠ Not synced to Anki</span>
+                            <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>
+                                Not synced to Anki
+                            </span>
                         {% endif %}
                     </div>
                 </div>
 
                 <div class="word-actions">
-                    <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">🔄 Regenerate</button>
-                    <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">Edit</a>
+                    <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">
+                        <i data-lucide="refresh-cw" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+                        Regenerate
+                    </button>
+                    <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">
+                        <i data-lucide="pencil" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+                        Edit
+                    </a>
                 </div>
             </div>
         </div>
@@ -343,6 +357,9 @@
             urlParams.delete('page');  // Reset to page 1 when sorting changes
             window.location.search = urlParams.toString();
         }
+
+        // Initialize Lucide icons
+        lucide.createIcons();
     </script>
 </body>
 </html>

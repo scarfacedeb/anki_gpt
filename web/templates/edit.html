@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Prevent flash of white background */
         html {
@@ -40,7 +41,7 @@
 </head>
 <body>
     <header>
-        <h1>✏️ Edit Word: {{ word.dutch }}</h1>
+        <h1><i data-lucide="pencil" style="width: 24px; height: 24px; vertical-align: -4px;"></i> Edit Word: {{ word.dutch }}</h1>
     </header>
 
     <div class="edit-form">
@@ -118,5 +119,9 @@
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>

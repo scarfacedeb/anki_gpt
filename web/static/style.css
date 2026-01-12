@@ -126,6 +126,42 @@ h1 {
     box-shadow: var(--shadow);
 }
 
+.theme-toggle.icon-only {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.header-quick-add {
+    width: 220px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-medium);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.header-quick-add::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.header-quick-add:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.header-quick-add:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .search-sort-wrapper {
     background: var(--bg-secondary);
     padding: 18px 24px;
@@ -353,22 +389,33 @@ h1 {
 .delete-icon {
     background: none;
     border: none;
-    font-size: 18px;
     cursor: pointer;
     padding: 8px;
     color: var(--text-dim);
-    opacity: 0.5;
-    transition: opacity 0.2s ease, color 0.2s ease;
+    opacity: 0.4;
+    transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.delete-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
 }
 
 .delete-icon:hover {
     opacity: 1;
     color: var(--accent-red);
-    background: var(--bg-hover);
+    background: rgba(220, 38, 38, 0.1);
+}
+
+html.dark-mode .delete-icon:hover {
+    background: rgba(248, 113, 113, 0.15);
 }
 
 .expand-btn {
@@ -860,24 +907,24 @@ a:hover {
         line-height: 1.4;
     }
 
+    header > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .header-quick-add {
+        flex: 1;
+        max-width: none;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
     .theme-toggle {
-        align-self: flex-end;
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 6px 12px;
+        padding: 8px;
         font-size: 13px;
     }
 
-    .quick-add-container {
-        order: 3;
-        width: 100%;
-    }
-
-    .quick-add-container input[type="text"] {
-        flex: 1;
-        width: auto;
-        font-size: 16px; /* Prevents zoom on iOS */
+    .theme-toggle.icon-only {
+        min-width: 36px;
     }
 
     .search-sort-wrapper {
@@ -1007,8 +1054,14 @@ a:hover {
     }
 
     .delete-icon {
-        font-size: 16px;
-        padding: 4px;
+        padding: 6px;
+        min-width: 28px;
+        min-height: 28px;
+    }
+
+    .delete-icon svg {
+        width: 14px;
+        height: 14px;
     }
 
     .word-dutch {

@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         html {
             background-color: #f8f9fa;
@@ -132,11 +133,16 @@
 <body>
     <header>
         <div class="header-left">
-            <h1>⚙️ Settings</h1>
+            <h1><i data-lucide="settings" style="width: 24px; height: 24px; vertical-align: -4px;"></i> Settings</h1>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
-            <a href="/" class="theme-toggle" style="text-decoration: none; display: inline-block;">← Back</a>
-            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            <a href="/" class="theme-toggle" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                Back
+            </a>
+            <button class="theme-toggle icon-only" onclick="toggleTheme()" title="Toggle dark mode">
+                <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
     </header>
 
@@ -164,10 +170,12 @@
 
             <div style="margin-top: 16px; display: flex; gap: 12px;">
                 <button class="btn btn-primary" onclick="syncToAnki()" id="syncToButton" style="flex: 1;">
-                    🔄 Sync to Anki
+                    <i data-lucide="upload" style="width: 16px; height: 16px; vertical-align: -3px;"></i>
+                    Sync to Anki
                 </button>
                 <button class="btn btn-primary" onclick="syncFromAnki()" id="syncFromButton" style="flex: 1;">
-                    🔄 Sync from Anki
+                    <i data-lucide="download" style="width: 16px; height: 16px; vertical-align: -3px;"></i>
+                    Sync from Anki
                 </button>
             </div>
             <div id="syncStatus" class="sync-status"></div>
@@ -349,6 +357,9 @@
             const statusDiv = document.getElementById('syncStatus');
             startSync('/api/sync/from-anki', '/api/sync/from-anki/status', btn, statusDiv, 'from');
         }
+
+        // Initialize Lucide icons
+        lucide.createIcons();
     </script>
 </body>
 </html>
