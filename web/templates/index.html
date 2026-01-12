@@ -141,6 +141,9 @@
                     <div class="word-pronunciation">{{ word.pronunciation }}</div>
                 </div>
                 <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
+                <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
+                    🗑️
+                </button>
             </div>
 
             <div class="word-details">
@@ -256,7 +259,6 @@
                 <div class="word-actions">
                     <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">🔄 Regenerate</button>
                     <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">Edit</a>
-                    <button class="btn btn-delete" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">Delete</button>
                 </div>
             </div>
         </div>
