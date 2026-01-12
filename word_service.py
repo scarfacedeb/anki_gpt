@@ -362,10 +362,10 @@ class WordService:
             }
 
         try:
-            # Get all words from database (source of truth)
-            all_words = self.get_all()
+            # Get only unsynced words from database
+            all_words = self.get_unsynced()
 
-            logger.info(f"Starting sync of {len(all_words)} words to Anki...")
+            logger.info(f"Starting sync of {len(all_words)} unsynced words to Anki...")
 
             synced_count = 0
             failed_count = 0

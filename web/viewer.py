@@ -78,7 +78,7 @@ def get_words_with_timestamps(query=None):
 
             # Extract Anki sync info
             anki_info = {
-                'synced': row['anki_note_id'] is not None,
+                'synced': row['synced_at'] is not None,
                 'note_id': row['anki_note_id'],
                 'deck_name': row['deck_name'],
                 'synced_at': row['synced_at'],
@@ -227,6 +227,38 @@ def get_stats_api():
     """Get database statistics as JSON."""
     stats = word_service.get_stats()
     return jsonify(stats)
+
+@app.route('/settings')
+def settings():
+    """Settings page."""
+    from user_settings import get_user_config
+    config = get_user_config(WEB_USER_ID)
+    stats = word_service.get_stats()
+    return render_template('settings.html', config=config, stats=stats)
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def settings_api():
+    """Get or update web interface settings."""
+    from user_settings import get_user_config, set_user_setting
+
+    if request.method == 'GET':
+        config = get_user_config(WEB_USER_ID)
+        return jsonify(config.to_dict())
+
+    # POST - update settings
+    try:
+        data = request.json
+        success = True
+
+        for key, value in data.items():
+            if not set_user_setting(WEB_USER_ID, key, value):
+                success = False
+                return jsonify({'success': False, 'error': f'Invalid value for {key}'}), 400
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating settings: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 import threading
 
