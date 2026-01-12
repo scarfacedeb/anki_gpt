@@ -69,6 +69,7 @@ class WordDatabase:
             self._migrate_add_anki_stats_columns(conn)
             self._migrate_add_level_column(conn)
             self._migrate_add_tags_column(conn)
+            self._migrate_add_score_column(conn)
 
     def _migrate_legacy_anki_data(self, conn):
         """Migrate data from legacy synced_to_anki and anki_note_id columns to anki_words table."""
@@ -142,6 +143,18 @@ class WordDatabase:
             cursor.execute("ALTER TABLE words ADD COLUMN tags TEXT DEFAULT '[]'")
             conn.commit()
 
+    def _migrate_add_score_column(self, conn):
+        """Add score column to words table if it doesn't exist."""
+        cursor = conn.cursor()
+
+        # Check if score column exists
+        cursor.execute("PRAGMA table_info(words)")
+        existing_columns = {col[1] for col in cursor.fetchall()}
+
+        if 'score' not in existing_columns:
+            cursor.execute("ALTER TABLE words ADD COLUMN score INTEGER DEFAULT 1")
+            conn.commit()
+
     def _word_to_dict(self, word: Word) -> dict:
         """Convert Word object to dictionary for database storage."""
         return {
@@ -158,7 +171,8 @@ class WordDatabase:
             'etymology': word.etymology,
             'related': json.dumps(word.related),
             'tags': json.dumps(word.tags),
-            'level': word.level
+            'level': word.level,
+            'score': word.score
         }
 
     def _dict_to_word(self, row: dict) -> Word:
@@ -177,7 +191,8 @@ class WordDatabase:
             etymology=row['etymology'],
             related=json.loads(row['related']),
             tags=json.loads(row.get('tags', '[]')),
-            level=row.get('level', '')  # Use get() for backwards compatibility
+            level=row.get('level', ''),  # Use get() for backwards compatibility
+            score=row.get('score', 1)  # Default to 1 for existing entries
         )
 
     def save_word(self, word: Word) -> int:

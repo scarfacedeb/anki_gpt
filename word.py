@@ -21,6 +21,12 @@ class Word(BaseModel):
         default="",
         description="CEFR difficulty level for Dutch learners. Examples: A1 (beginner), A2 (elementary), B1 (intermediate), B2 (upper-intermediate), C1 (advanced), C2 (proficient)"
     )
+    score: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="A score from 1 to 10 indicating how useful or important the word is to learn. 10 being most useful/important. This can consider popularity, general utility, and relevance to specific learning goals (e.g., Inburgering A2)."
+    )
 
     model_config = {
         "populate_by_name": True
@@ -67,6 +73,7 @@ def word_to_html(word: Word) -> str:
         f"<b>Synonyms:</b> {', '.join(word.synonyms)}",
         f"<b>Related:</b> {', '.join(word.related)}",
         f"<b>Tags:</b> {', '.join(word.tags)}",
+        f"<b>Score:</b> {word.score}",
         f"<b>Definition:</b> {word.definition_nl} ",
         f"<b>Definition EN:</b> {word.definition_en} ",
         f"<b>Examples:</b><i>{examples_html}</i>"
