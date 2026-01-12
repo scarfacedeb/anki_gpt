@@ -1,11 +1,12 @@
 """
-Sync operations between Anki and the local database.
+Backfill operations between Anki and the local database.
 """
 import requests
 import logging
 from dotenv import load_dotenv
 from word import Word
 from db import WordDatabase
+from anki import add_note
 from config import ANKI_CONNECT_URL
 
 # Load environment variables from .env file
@@ -116,8 +117,6 @@ def export_db_to_anki(deck_name: str = DECK_NAME) -> tuple[int, int]:
     Export all words from database to Anki.
     Returns tuple of (successful_count, total_count).
     """
-    from anki import add_note
-
     db = WordDatabase()
     all_words = db.get_all_words()
 
@@ -137,42 +136,3 @@ def export_db_to_anki(deck_name: str = DECK_NAME) -> tuple[int, int]:
 
     logger.info(f"Successfully exported {success_count}/{len(all_words)} words from database to Anki")
     return (success_count, len(all_words))
-
-
-def main_import():
-    """CLI entry point for importing from Anki to database."""
-    print("Importing words from Anki to database...")
-    success, total = export_anki_to_db()
-    print(f"✅ Imported {success}/{total} words from Anki to database")
-
-
-def main_export():
-    """CLI entry point for exporting from database to Anki."""
-    print("Exporting words from database to Anki...")
-    success, total = export_db_to_anki()
-    print(f"✅ Exported {success}/{total} words from database to Anki")
-
-
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) < 2:
-        print("Usage: python sync.py [import|export]")
-        print("  import: Import words from Anki to database")
-        print("  export: Export words from database to Anki")
-        sys.exit(1)
-
-    command = sys.argv[1]
-
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
-
-    if command == "import":
-        main_import()
-    elif command == "export":
-        main_export()
-    else:
-        print(f"Unknown command: {command}")
-        sys.exit(1)

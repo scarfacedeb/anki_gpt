@@ -17,7 +17,7 @@ import logging
 from typing import Optional, List
 from word import Word
 from db import WordDatabase
-from anki import delete_note, add_note
+from anki import delete_note, add_note, sync_anki, update_note_by_id
 from config import ENABLE_ANKI_SYNC
 
 logger = logging.getLogger(__name__)
@@ -362,8 +362,6 @@ class WordService:
             }
 
         try:
-            from anki import sync_anki
-
             # Get all words from database (source of truth)
             all_words = self.get_all()
 
@@ -381,7 +379,6 @@ class WordService:
 
                     if existing_note_id:
                         # Word already has a note ID - update it directly
-                        from anki import update_note_by_id
                         success = update_note_by_id(existing_note_id, word, self.deck_name)
                         if success:
                             # Update the sync timestamp
