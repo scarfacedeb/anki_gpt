@@ -170,12 +170,12 @@
 
                 <div class="word-section">
                     <div class="word-label">Definition (NL)</div>
-                    <div class="word-content">{{ word.definition_nl }}</div>
+                    <div class="word-content">{{ word.definition_nl | safe }}</div>
                 </div>
 
                 <div class="word-section">
                     <div class="word-label">Definition (EN)</div>
-                    <div class="word-content">{{ word.definition_en }}</div>
+                    <div class="word-content">{{ word.definition_en | safe }}</div>
                 </div>
 
                 {% if word.collocations %}
@@ -228,7 +228,7 @@
                 {% if word.etymology %}
                 <div class="word-section">
                     <div class="word-label">Etymology</div>
-                    <div class="word-content">{{ word.etymology }}</div>
+                    <div class="word-content">{{ word.etymology | safe }}</div>
                 </div>
                 {% endif %}
 

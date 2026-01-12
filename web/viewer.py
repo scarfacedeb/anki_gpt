@@ -471,36 +471,8 @@ def regenerate_word(dutch):
         # Return both old and new word data
         return jsonify({
             'success': True,
-            'current': {
-                'dutch': current_word.dutch,
-                'translation': current_word.translation,
-                'definition_nl': current_word.definition_nl,
-                'definition_en': current_word.definition_en,
-                'pronunciation': current_word.pronunciation,
-                'grammar': current_word.grammar,
-                'level': current_word.level,
-                'collocations': current_word.collocations,
-                'synonyms': current_word.synonyms,
-                'examples_nl': current_word.examples_nl,
-                'examples_en': current_word.examples_en,
-                'etymology': current_word.etymology,
-                'related': current_word.related
-            },
-            'new': {
-                'dutch': new_word.dutch,
-                'translation': new_word.translation,
-                'definition_nl': new_word.definition_nl,
-                'definition_en': new_word.definition_en,
-                'pronunciation': new_word.pronunciation,
-                'grammar': new_word.grammar,
-                'level': new_word.level,
-                'collocations': new_word.collocations,
-                'synonyms': new_word.synonyms,
-                'examples_nl': new_word.examples_nl,
-                'examples_en': new_word.examples_en,
-                'etymology': new_word.etymology,
-                'related': new_word.related
-            }
+            'current': current_word.model_dump(),
+            'new': new_word.model_dump()
         })
     except Exception as e:
         logger.error(f"Error regenerating word: {e}", exc_info=True)

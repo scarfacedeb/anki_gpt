@@ -44,6 +44,10 @@ ALWAYS RESPOND IN ENGLISH USING PROPER JSON FORMAT.
 - **Etymology:** Trace from modern Dutch → Middle Dutch → earlier stages → PIE if possible
 - **Related words:** Must share etymological roots, not just semantic similarity
 
+### HTML Formatting
+- For the `definition_nl`, `definition_en`, and `etymology` fields, use simple HTML tags like `<b>` for emphasis on key terms and `<i>` for clarification or examples within the text.
+- Do not use block-level elements like `<p>` or `<div>`.
+
 ### Special Cases
 - **Phrases/Idioms:** If input is quoted, treat as single unit, omit grammar/pronunciation
 - **Multiple meanings:** Focus on 2-3 most common definitions
