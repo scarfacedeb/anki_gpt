@@ -127,7 +127,7 @@
     {% endif %}
 
     <div class="word-list">
-        {% for word, created_at, updated_at, anki_info in words_data %}
+        {% for word, created_at, updated_at, anki_info, search_priority in words_data %}
         <div class="word-card">
             <div class="word-summary" onclick="toggleDetails(this)">
                 <div class="word-dutch">

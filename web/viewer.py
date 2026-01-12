@@ -41,7 +41,7 @@ def build_pagination_url(page, query, sort_by, order):
 app.jinja_env.globals.update(get_pagination_url=build_pagination_url)
 
 def get_words_with_timestamps(query=None):
-    """Get words with their created_at, updated_at timestamps, and Anki sync info."""
+    """Get words with their created_at, updated_at timestamps, Anki sync info, and search priority."""
     import sqlite3
     from pathlib import Path
 
@@ -56,12 +56,17 @@ def get_words_with_timestamps(query=None):
             search_pattern = f"%{query}%"
             cursor.execute("""
                 SELECT w.*, a.anki_note_id, a.deck_name, a.synced_at, a.sync_count,
-                       a.reviews, a.lapses, a.ease_factor, a.interval, a.due
+                       a.reviews, a.lapses, a.ease_factor, a.interval, a.due,
+                       CASE
+                           WHEN w.dutch LIKE ? THEN 1
+                           WHEN w.translation LIKE ? THEN 2
+                           ELSE 3
+                       END as search_priority
                 FROM words w
                 LEFT JOIN anki_words a ON w.id = a.word_id
                 WHERE w.dutch LIKE ? OR w.translation LIKE ?
                    OR w.definition_nl LIKE ? OR w.definition_en LIKE ?
-            """, (search_pattern, search_pattern, search_pattern, search_pattern))
+            """, (search_pattern, search_pattern, search_pattern, search_pattern, search_pattern, search_pattern))
         else:
             cursor.execute("""
                 SELECT w.*, a.anki_note_id, a.deck_name, a.synced_at, a.sync_count,
@@ -75,6 +80,7 @@ def get_words_with_timestamps(query=None):
             word = word_service.db._dict_to_word(dict(row))
             created_at = row['created_at']
             updated_at = row['updated_at']
+            search_priority = row['search_priority'] if query else 0
 
             # Extract Anki sync info
             anki_info = {
@@ -90,7 +96,7 @@ def get_words_with_timestamps(query=None):
                 'due': row['due']
             }
 
-            words_data.append((word, created_at, updated_at, anki_info))
+            words_data.append((word, created_at, updated_at, anki_info, search_priority))
 
     return words_data
 
@@ -106,15 +112,34 @@ def index():
     all_words = get_words_with_timestamps(query if query else None)
 
     # Sort words
+    # When searching, use search_priority as primary sort, user's choice as secondary
+    # When not searching, only use user's choice
     reverse = (order == 'desc')
-    if sort_by == 'dutch':
-        all_words.sort(key=lambda w: w[0].dutch.lower(), reverse=reverse)
-    elif sort_by == 'translation':
-        all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
-    elif sort_by == 'grammar':
-        all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
-    elif sort_by == 'created_at':
-        all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
+    if query:
+        # Multi-level sort: first by search_priority (always ascending), then by user's choice
+        # To keep priority ascending while allowing user sort to be descending, we sort in two passes
+        if sort_by == 'dutch':
+            all_words.sort(key=lambda w: w[0].dutch.lower(), reverse=reverse)
+            all_words.sort(key=lambda w: w[4])  # Priority always ascending
+        elif sort_by == 'translation':
+            all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
+            all_words.sort(key=lambda w: w[4])  # Priority always ascending
+        elif sort_by == 'grammar':
+            all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
+            all_words.sort(key=lambda w: w[4])  # Priority always ascending
+        elif sort_by == 'created_at':
+            all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
+            all_words.sort(key=lambda w: w[4])  # Priority always ascending
+    else:
+        # Normal sorting without search priority
+        if sort_by == 'dutch':
+            all_words.sort(key=lambda w: w[0].dutch.lower(), reverse=reverse)
+        elif sort_by == 'translation':
+            all_words.sort(key=lambda w: w[0].translation.lower(), reverse=reverse)
+        elif sort_by == 'grammar':
+            all_words.sort(key=lambda w: w[0].grammar.lower(), reverse=reverse)
+        elif sort_by == 'created_at':
+            all_words.sort(key=lambda w: w[1] or '', reverse=reverse)
 
     # Pagination
     total_words = len(all_words)
