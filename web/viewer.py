@@ -438,7 +438,8 @@ def update_word(dutch):
         'examples_nl': [x.strip() for x in request.form.get('examples_nl', '').split('\n') if x.strip()],
         'examples_en': [x.strip() for x in request.form.get('examples_en', '').split('\n') if x.strip()],
         'etymology': request.form.get('etymology'),
-        'related': [x.strip() for x in request.form.get('related', '').split('\n') if x.strip()]
+        'related': [x.strip() for x in request.form.get('related', '').split('\n') if x.strip()],
+        'tags': [x.strip() for x in request.form.get('tags', '').split('\n') if x.strip()]
     }
 
     # Create Word object

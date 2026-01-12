@@ -13,6 +13,10 @@ class Word(BaseModel):
     examples_en: list[str]
     etymology: str
     related: list[str]
+    tags: list[str] = Field(
+        default_factory=list,
+        description="A list of tags for the word. For example, part of speech like 'noun', 'verb'. Also add 'inburgering' tag if the word is useful for the Inburgering A2 exam."
+    )
     level: str = Field(
         default="",
         description="CEFR difficulty level for Dutch learners. Examples: A1 (beginner), A2 (elementary), B1 (intermediate), B2 (upper-intermediate), C1 (advanced), C2 (proficient)"
@@ -62,6 +66,7 @@ def word_to_html(word: Word) -> str:
         f"<b>Collocations:</b> {', '.join(word.collocations)}",
         f"<b>Synonyms:</b> {', '.join(word.synonyms)}",
         f"<b>Related:</b> {', '.join(word.related)}",
+        f"<b>Tags:</b> {', '.join(word.tags)}",
         f"<b>Definition:</b> {word.definition_nl} ",
         f"<b>Definition EN:</b> {word.definition_en} ",
         f"<b>Examples:</b><i>{examples_html}</i>"

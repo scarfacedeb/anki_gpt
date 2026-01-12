@@ -11,6 +11,9 @@ TAGS = ["gpt"]
 logger = logging.getLogger(__name__)
 
 def build_note(word: Word, deck_name: str = DECK_NAME) -> dict:
+    # Combine default tags with word-specific tags
+    all_tags = list(set(TAGS + word.tags))
+
     return {
         "deckName": deck_name,
         "modelName": MODEL_NAME,
@@ -18,7 +21,7 @@ def build_note(word: Word, deck_name: str = DECK_NAME) -> dict:
         "options": {
             "allowDuplicate": False
         },
-        "tags": TAGS
+        "tags": all_tags
     }
 
 

@@ -79,6 +79,10 @@ class WordService:
         Returns:
             Tuple of (db_row_id, anki_note_id)
         """
+        # Add level as a tag if it exists and is not already in tags
+        if word.level and word.level not in word.tags:
+            word.tags.append(word.level)
+
         # Step 1: Save to database
         try:
             db_row_id = self.db.save_word(word)

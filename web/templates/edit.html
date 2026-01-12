@@ -100,6 +100,12 @@
             </div>
 
             <div class="form-group">
+                <label class="form-label">Tags</label>
+                <textarea name="tags" class="form-textarea">{{ word.tags | join('\n') }}</textarea>
+                <div class="form-help">One per line (e.g., noun, verb, inburgering)</div>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label">Examples (Dutch)</label>
                 <textarea name="examples_nl" class="form-textarea">{{ word.examples_nl | join('\n') }}</textarea>
                 <div class="form-help">One per line</div>

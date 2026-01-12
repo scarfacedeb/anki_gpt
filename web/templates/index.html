@@ -199,6 +199,13 @@
                 </div>
                 {% endif %}
 
+                {% if word.tags %}
+                <div class="word-section">
+                    <div class="word-label">Tags</div>
+                    <div class="word-list-inline">{{ word.tags | join(', ') }}</div>
+                </div>
+                {% endif %}
+
                 {% if word.examples_nl %}
                 <div class="word-section">
                     <div class="word-label">Examples</div>
