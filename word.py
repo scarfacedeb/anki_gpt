@@ -13,6 +13,10 @@ class Word(BaseModel):
     examples_en: list[str]
     etymology: str
     related: list[str]
+    level: str = Field(
+        default="",
+        description="CEFR difficulty level for Dutch learners. Examples: A1 (beginner), A2 (elementary), B1 (intermediate), B2 (upper-intermediate), C1 (advanced), C2 (proficient)"
+    )
 
     model_config = {
         "populate_by_name": True

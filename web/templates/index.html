@@ -138,14 +138,16 @@
                             Not synced
                         </span>
                     {% endif %}
-                    <div style="font-size: 11px; color: var(--text-dim); font-weight: normal; margin-top: 2px;">
-                        {{ updated_at[:10] if updated_at else '' }}
+                    <div style="font-size: 12px; color: var(--text-dim); font-weight: normal; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                        <span>{{ word.pronunciation }}</span>
+                        {% if word.level %}
+                        <span class="word-level" style="font-size: 11px; color: var(--text-dim); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px;">{{ word.level }}</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="word-translation">{{ word.translation }}</div>
                 <div class="word-grammar-pronunciation">
                     <div class="word-grammar">{{ word.grammar[:60] }}{% if word.grammar|length > 60 %}...{% endif %}</div>
-                    <div class="word-pronunciation">{{ word.pronunciation }}</div>
                 </div>
                 <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
                 <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
@@ -158,6 +160,13 @@
                     <div class="word-label">Grammar</div>
                     <div class="word-content">{{ word.grammar }}</div>
                 </div>
+
+                {% if word.level %}
+                <div class="word-section">
+                    <div class="word-label">Level</div>
+                    <div class="word-content">{{ word.level }}</div>
+                </div>
+                {% endif %}
 
                 <div class="word-section">
                     <div class="word-label">Definition (NL)</div>

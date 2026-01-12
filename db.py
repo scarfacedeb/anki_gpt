@@ -29,6 +29,7 @@ class WordDatabase:
                     examples_en TEXT NOT NULL,   -- JSON array
                     etymology TEXT NOT NULL,
                     related TEXT NOT NULL,       -- JSON array
+                    level TEXT DEFAULT '',       -- Difficulty level
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(dutch)
@@ -66,6 +67,7 @@ class WordDatabase:
             # Migrate legacy data if old columns exist
             self._migrate_legacy_anki_data(conn)
             self._migrate_add_anki_stats_columns(conn)
+            self._migrate_add_level_column(conn)
 
     def _migrate_legacy_anki_data(self, conn):
         """Migrate data from legacy synced_to_anki and anki_note_id columns to anki_words table."""
@@ -115,6 +117,18 @@ class WordDatabase:
 
         conn.commit()
 
+    def _migrate_add_level_column(self, conn):
+        """Add level column to words table if it doesn't exist."""
+        cursor = conn.cursor()
+
+        # Check if level column exists
+        cursor.execute("PRAGMA table_info(words)")
+        existing_columns = {col[1] for col in cursor.fetchall()}
+
+        if 'level' not in existing_columns:
+            cursor.execute("ALTER TABLE words ADD COLUMN level TEXT DEFAULT ''")
+            conn.commit()
+
     def _word_to_dict(self, word: Word) -> dict:
         """Convert Word object to dictionary for database storage."""
         return {
@@ -129,7 +143,8 @@ class WordDatabase:
             'examples_nl': json.dumps(word.examples_nl),
             'examples_en': json.dumps(word.examples_en),
             'etymology': word.etymology,
-            'related': json.dumps(word.related)
+            'related': json.dumps(word.related),
+            'level': word.level
         }
 
     def _dict_to_word(self, row: dict) -> Word:
@@ -146,7 +161,8 @@ class WordDatabase:
             examples_nl=json.loads(row['examples_nl']),
             examples_en=json.loads(row['examples_en']),
             etymology=row['etymology'],
-            related=json.loads(row['related'])
+            related=json.loads(row['related']),
+            level=row.get('level', '')  # Use get() for backwards compatibility
         )
 
     def save_word(self, word: Word) -> int:

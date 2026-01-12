@@ -259,6 +259,7 @@ function displayComparison(current, newData) {
         { key: 'translation', label: 'Translation' },
         { key: 'pronunciation', label: 'Pronunciation' },
         { key: 'grammar', label: 'Grammar' },
+        { key: 'level', label: 'Level' },
         { key: 'definition_nl', label: 'Definition (NL)' },
         { key: 'definition_en', label: 'Definition (EN)' },
         { key: 'collocations', label: 'Collocations', isArray: true },
