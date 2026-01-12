@@ -135,24 +135,42 @@
             <h1>⚙️ Settings</h1>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="/" class="theme-toggle" style="text-decoration: none; display: inline-block;">← Back</a>
             <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
         </div>
     </header>
 
     <div class="settings-container">
-        <a href="/" class="back-link">← Back to Word Viewer</a>
+
+        <!-- Database Stats -->
+        <div class="settings-section">
+            <h2>Database Statistics</h2>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px; font-size: 14px;">
+                <span style="color: var(--text-dim);">Total words:</span>
+                <span style="font-weight: 500;">{{ stats.total_words }}</span>
+
+                <span style="color: var(--text-dim);">Synced to Anki:</span>
+                <span style="font-weight: 500; color: #10b981;">{{ stats.synced_to_anki }}</span>
+
+                <span style="color: var(--text-dim);">Unsynced:</span>
+                <span style="font-weight: 500; color: #f59e0b;">{{ stats.unsynced }}</span>
+            </div>
+        </div>
 
         <!-- Anki Sync Section -->
         <div class="settings-section">
             <h2>Anki Synchronization</h2>
-            <p>Sync unsynced words from your database to Anki.</p>
+            <p>Sync words between your database and Anki.</p>
 
-            <div style="margin-top: 16px;">
-                <button class="btn btn-primary" onclick="syncAnki()" id="syncButton" style="width: 100%;">
-                    🔄 Sync Unsynced Words to Anki
+            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="syncToAnki()" id="syncToButton" style="flex: 1;">
+                    🔄 Sync to Anki
                 </button>
-                <div id="syncStatus" class="sync-status"></div>
+                <button class="btn btn-primary" onclick="syncFromAnki()" id="syncFromButton" style="flex: 1;">
+                    🔄 Sync from Anki
+                </button>
             </div>
+            <div id="syncStatus" class="sync-status"></div>
         </div>
 
         <!-- Word Generation Settings -->
@@ -192,37 +210,42 @@
                 </div>
             </div>
         </div>
-
-        <!-- Database Stats -->
-        <div class="settings-section">
-            <h2>Database Statistics</h2>
-            <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px; font-size: 14px;">
-                <span style="color: var(--text-dim);">Total words:</span>
-                <span style="font-weight: 500;">{{ stats.total_words }}</span>
-
-                <span style="color: var(--text-dim);">Synced to Anki:</span>
-                <span style="font-weight: 500; color: #10b981;">{{ stats.synced_to_anki }}</span>
-
-                <span style="color: var(--text-dim);">Unsynced:</span>
-                <span style="font-weight: 500; color: #f59e0b;">{{ stats.unsynced }}</span>
-            </div>
-        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
+        // Constants
+        const POLL_INTERVAL = 1000;
+        const RESULT_DISPLAY_DURATION = 2000;
+
+        // Utility functions
+        const pluralize = (count, singular) => count !== 1 ? `${singular}s` : singular;
+
+        const showError = (btn, statusDiv, originalText, error) => {
+            btn.textContent = '❌ Failed';
+            statusDiv.textContent = `Error: ${error || 'Unknown error'}`;
+            statusDiv.classList.add('show');
+            setTimeout(() => resetButton(btn, statusDiv, originalText), RESULT_DISPLAY_DURATION);
+        };
+
+        const resetButton = (btn, statusDiv, originalText) => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+            statusDiv.classList.remove('show');
+        };
+
+        // Settings API
         async function updateSetting(key, value) {
             try {
                 const response = await fetch('/api/settings', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ [key]: value })
                 });
 
                 const result = await response.json();
                 if (!result.success) {
+                    console.error('Failed to update setting:', key, value);
                     alert('Failed to update setting');
                 }
             } catch (error) {
@@ -231,9 +254,8 @@
             }
         }
 
-        async function syncAnki() {
-            const btn = document.getElementById('syncButton');
-            const statusDiv = document.getElementById('syncStatus');
+        // Generic sync function
+        async function startSync(endpoint, statusEndpoint, btn, statusDiv, direction) {
             const originalText = btn.textContent;
 
             btn.disabled = true;
@@ -241,87 +263,91 @@
             statusDiv.classList.remove('show');
 
             try {
-                const response = await fetch('/api/sync', {
-                    method: 'POST'
-                });
-
+                const response = await fetch(endpoint, { method: 'POST' });
                 const data = await response.json();
 
                 if (!data.success) {
-                    btn.textContent = '❌ Failed';
-                    statusDiv.textContent = 'Error: ' + (data.error || 'Unknown error');
-                    statusDiv.classList.add('show');
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                    }, 2000);
+                    showError(btn, statusDiv, originalText, data.error);
                     return;
                 }
 
                 btn.textContent = '⏳ Syncing...';
-                pollSyncStatus(btn, statusDiv, originalText);
+                pollSyncStatus(statusEndpoint, btn, statusDiv, originalText, direction);
 
             } catch (error) {
                 console.error('Sync error:', error);
-                btn.textContent = '❌ Error';
-                statusDiv.textContent = 'Error: ' + error.message;
-                statusDiv.classList.add('show');
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }, 2000);
+                showError(btn, statusDiv, originalText, error.message);
             }
         }
 
-        async function pollSyncStatus(btn, statusDiv, originalText) {
+        // Generic polling function
+        async function pollSyncStatus(statusEndpoint, btn, statusDiv, originalText, direction) {
             try {
-                const response = await fetch('/api/sync/status');
+                const response = await fetch(statusEndpoint);
                 const status = await response.json();
 
                 if (status.in_progress) {
-                    setTimeout(() => pollSyncStatus(btn, statusDiv, originalText), 1000);
-                } else if (status.last_result) {
-                    const result = status.last_result;
+                    setTimeout(() => pollSyncStatus(statusEndpoint, btn, statusDiv, originalText, direction), POLL_INTERVAL);
+                    return;
+                }
 
-                    if (result.success) {
-                        const message = result.total === 0
-                            ? '✅ Nothing to sync'
-                            : `✅ ${result.synced}/${result.total}`;
-                        btn.textContent = message;
+                if (!status.last_result) return;
 
-                        if (result.total > 0) {
-                            statusDiv.textContent = `Successfully synced ${result.synced} word${result.synced !== 1 ? 's' : ''} to Anki.`;
-                            if (result.failed > 0) {
-                                statusDiv.textContent += ` ${result.failed} failed.`;
-                            }
-                            statusDiv.classList.add('show');
-                        }
+                const result = status.last_result;
 
-                        setTimeout(() => {
-                            btn.textContent = originalText;
-                            btn.disabled = false;
-                            window.location.reload();
-                        }, 2000);
-                    } else {
-                        btn.textContent = '❌ Failed';
-                        statusDiv.textContent = 'Error: ' + (result.error || 'Unknown error');
-                        statusDiv.classList.add('show');
-                        setTimeout(() => {
-                            btn.textContent = originalText;
-                            btn.disabled = false;
-                        }, 2000);
-                    }
+                if (result.success) {
+                    handleSyncSuccess(result, btn, statusDiv, originalText, direction);
+                } else {
+                    showError(btn, statusDiv, originalText, result.error);
                 }
             } catch (error) {
                 console.error('Status polling error:', error);
-                btn.textContent = '❌ Error';
-                statusDiv.textContent = 'Error: ' + error.message;
-                statusDiv.classList.add('show');
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }, 2000);
+                showError(btn, statusDiv, originalText, error.message);
             }
+        }
+
+        // Handle successful sync
+        function handleSyncSuccess(result, btn, statusDiv, originalText, direction) {
+            const { synced, failed, total } = result;
+
+            // Update button text
+            if (direction === 'to' && total === 0) {
+                btn.textContent = '✅ Nothing to sync';
+            } else {
+                btn.textContent = direction === 'to' && total > 0
+                    ? `✅ ${synced}/${total}`
+                    : `✅ Synced ${synced} ${pluralize(synced, 'word')}`;
+            }
+
+            // Update status message
+            if (synced > 0) {
+                const directionText = direction === 'to' ? 'to' : 'from';
+                statusDiv.textContent = `Successfully synced ${synced} ${pluralize(synced, 'word')} ${directionText} Anki.`;
+                if (failed > 0) {
+                    statusDiv.textContent += ` ${failed} failed.`;
+                }
+                statusDiv.classList.add('show');
+            }
+
+            // Reload page after delay
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                window.location.reload();
+            }, RESULT_DISPLAY_DURATION);
+        }
+
+        // Public sync functions
+        function syncToAnki() {
+            const btn = document.getElementById('syncToButton');
+            const statusDiv = document.getElementById('syncStatus');
+            startSync('/api/sync/to-anki', '/api/sync/to-anki/status', btn, statusDiv, 'to');
+        }
+
+        function syncFromAnki() {
+            const btn = document.getElementById('syncFromButton');
+            const statusDiv = document.getElementById('syncStatus');
+            startSync('/api/sync/from-anki', '/api/sync/from-anki/status', btn, statusDiv, 'from');
         }
     </script>
 </body>

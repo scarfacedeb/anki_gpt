@@ -262,63 +262,129 @@ def settings_api():
 
 import threading
 
-# Global sync status with thread lock
-sync_status_lock = threading.Lock()
-sync_status = {
+# Global sync status with thread locks
+sync_to_anki_lock = threading.Lock()
+sync_to_anki_status = {
     'in_progress': False,
     'last_result': None
 }
 
-def run_sync_in_background():
-    """Run sync in background thread."""
+sync_from_anki_lock = threading.Lock()
+sync_from_anki_status = {
+    'in_progress': False,
+    'last_result': None
+}
+
+def run_sync_to_anki_in_background():
+    """Run sync to Anki in background thread."""
     try:
         result = word_service.sync_all_to_anki()
 
-        with sync_status_lock:
-            sync_status['last_result'] = result
+        with sync_to_anki_lock:
+            sync_to_anki_status['last_result'] = result
 
-        logger.info(f"Background sync completed: {result}")
+        logger.info(f"Background sync to Anki completed: {result}")
     except Exception as e:
-        logger.error(f"Background sync failed: {e}", exc_info=True)
+        logger.error(f"Background sync to Anki failed: {e}", exc_info=True)
 
-        with sync_status_lock:
-            sync_status['last_result'] = {
+        with sync_to_anki_lock:
+            sync_to_anki_status['last_result'] = {
                 'success': False,
                 'error': str(e)
             }
     finally:
-        with sync_status_lock:
-            sync_status['in_progress'] = False
+        with sync_to_anki_lock:
+            sync_to_anki_status['in_progress'] = False
 
-@app.route('/api/sync', methods=['POST'])
-def sync_anki_api():
-    """Start async sync of all database words to Anki."""
-    with sync_status_lock:
-        if sync_status['in_progress']:
+def run_sync_from_anki_in_background():
+    """Run sync from Anki in background thread."""
+    try:
+        from backfill import export_anki_to_db
+        success_count, total_count = export_anki_to_db()
+
+        result = {
+            'success': True,
+            'synced': success_count,
+            'failed': total_count - success_count,
+            'total': total_count
+        }
+
+        with sync_from_anki_lock:
+            sync_from_anki_status['last_result'] = result
+
+        logger.info(f"Background sync from Anki completed: {result}")
+    except Exception as e:
+        logger.error(f"Background sync from Anki failed: {e}", exc_info=True)
+
+        with sync_from_anki_lock:
+            sync_from_anki_status['last_result'] = {
+                'success': False,
+                'error': str(e)
+            }
+    finally:
+        with sync_from_anki_lock:
+            sync_from_anki_status['in_progress'] = False
+
+@app.route('/api/sync/to-anki', methods=['POST'])
+def sync_to_anki_api():
+    """Start async sync of unsynced database words to Anki."""
+    with sync_to_anki_lock:
+        if sync_to_anki_status['in_progress']:
             return jsonify({
                 'success': False,
-                'error': 'Sync already in progress'
+                'error': 'Sync to Anki already in progress'
             }), 409
 
         # Mark as in progress before starting thread
-        sync_status['in_progress'] = True
+        sync_to_anki_status['in_progress'] = True
 
     # Start sync in background thread (outside lock to avoid blocking)
-    sync_thread = threading.Thread(target=run_sync_in_background, daemon=True)
+    sync_thread = threading.Thread(target=run_sync_to_anki_in_background, daemon=True)
     sync_thread.start()
 
     return jsonify({
         'success': True,
-        'message': 'Sync started in background'
+        'message': 'Sync to Anki started in background'
     })
 
-@app.route('/api/sync/status', methods=['GET'])
-def sync_status_api():
-    """Get current sync status."""
-    with sync_status_lock:
+@app.route('/api/sync/to-anki/status', methods=['GET'])
+def sync_to_anki_status_api():
+    """Get current sync to Anki status."""
+    with sync_to_anki_lock:
         return jsonify({
-            'in_progress': sync_status['in_progress'],
-            'last_result': sync_status['last_result']
+            'in_progress': sync_to_anki_status['in_progress'],
+            'last_result': sync_to_anki_status['last_result']
+        })
+
+@app.route('/api/sync/from-anki', methods=['POST'])
+def sync_from_anki_api():
+    """Start async sync from Anki to database."""
+    with sync_from_anki_lock:
+        if sync_from_anki_status['in_progress']:
+            return jsonify({
+                'success': False,
+                'error': 'Sync from Anki already in progress'
+            }), 409
+
+        # Mark as in progress before starting thread
+        sync_from_anki_status['in_progress'] = True
+
+    # Start sync in background thread (outside lock to avoid blocking)
+    sync_thread = threading.Thread(target=run_sync_from_anki_in_background, daemon=True)
+    sync_thread.start()
+
+    return jsonify({
+        'success': True,
+        'message': 'Sync from Anki started in background'
+    })
+
+@app.route('/api/sync/from-anki/status', methods=['GET'])
+def sync_from_anki_status_api():
+    """Get current sync from Anki status."""
+    with sync_from_anki_lock:
+        return jsonify({
+            'in_progress': sync_from_anki_status['in_progress'],
+            'last_result': sync_from_anki_status['last_result']
         })
 
 @app.route('/edit/<path:dutch>', methods=['GET'])
