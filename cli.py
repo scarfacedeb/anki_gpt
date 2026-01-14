@@ -1,5 +1,6 @@
 import sys
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from chatgpt import get_definitions
 from anki import sync_anki
@@ -63,6 +64,81 @@ def cmd_sync():
     else:
         print(f"❌ Sync failed: {result.get('error')}")
 
+def cmd_regenerate():
+    """Regenerate all words in the database, skipping words that already have a level."""
+    word_service = WordService()
+    all_words = word_service.get_all()
+
+    # Filter words that don't have a level yet
+    words_to_regenerate = [word for word in all_words if not word.level or word.level.strip() == '']
+
+    total = len(all_words)
+    to_regenerate_count = len(words_to_regenerate)
+    skipped_count = total - to_regenerate_count
+
+    print(f"Found {total} total words:")
+    print(f"  - {to_regenerate_count} words to regenerate (no level)")
+    print(f"  - {skipped_count} words to skip (already have level)")
+
+    if to_regenerate_count == 0:
+        print("✅ No words to regenerate!")
+        return
+
+    # Ask for confirmation
+    response = input(f"\nProceed with regenerating {to_regenerate_count} words in batches of 5? (y/n): ")
+    if response.lower() != 'y':
+        print("Cancelled.")
+        return
+
+    print("\nStarting regeneration (batches of 5)...")
+    success_count = 0
+    failed_words = []
+    completed_count = 0
+
+    def regenerate_word(word):
+        """Regenerate a single word and return result."""
+        try:
+            result = get_definitions(word.dutch, user_id=0)
+            if result.words and len(result.words) > 0:
+                new_word = result.words[0]
+                _, synced = word_service.update(new_word)
+                return (True, word.dutch, new_word.level)
+            else:
+                return (False, word.dutch, "No data returned")
+        except Exception as e:
+            return (False, word.dutch, str(e))
+
+    # Process in batches of 5
+    batch_size = 5
+    with ThreadPoolExecutor(max_workers=batch_size) as executor:
+        # Submit all tasks
+        future_to_word = {executor.submit(regenerate_word, word): word for word in words_to_regenerate}
+
+        # Process results as they complete
+        for future in as_completed(future_to_word):
+            word = future_to_word[future]
+            completed_count += 1
+
+            try:
+                success, dutch, info = future.result()
+                if success:
+                    success_count += 1
+                    print(f"[{completed_count}/{to_regenerate_count}] ✓ {dutch} (level: {info or 'none'})")
+                else:
+                    failed_words.append(dutch)
+                    print(f"[{completed_count}/{to_regenerate_count}] ✗ {dutch} - {info}")
+            except Exception as e:
+                failed_words.append(word.dutch)
+                print(f"[{completed_count}/{to_regenerate_count}] ✗ {word.dutch} - Error: {e}")
+
+    print(f"\n{'='*60}")
+    print(f"Regeneration complete!")
+    print(f"  ✓ Success: {success_count}/{to_regenerate_count}")
+    print(f"  ○ Skipped: {skipped_count} (already have level)")
+    if failed_words:
+        print(f"  ✗ Failed: {len(failed_words)}")
+        print(f"\nFailed words: {', '.join(failed_words)}")
+
 def main():
     """CLI entry point for anki-gpt-cli command."""
     if len(sys.argv) < 2:
@@ -86,14 +162,17 @@ def main():
         cmd_export()
     elif command == "sync":
         cmd_sync()
+    elif command == "regenerate":
+        cmd_regenerate()
     elif command == "help":
         print("Usage: anki-gpt [command]")
         print("\nCommands:")
-        print("  add      Add words via ChatGPT (default, interactive)")
-        print("  import   Import words from Anki to database")
-        print("  export   Export words from database to Anki")
-        print("  sync     Sync all database words to Anki")
-        print("  help     Show this help message")
+        print("  add         Add words via ChatGPT (default, interactive)")
+        print("  import      Import words from Anki to database")
+        print("  export      Export words from database to Anki")
+        print("  sync        Sync all database words to Anki")
+        print("  regenerate  Regenerate all words without a level")
+        print("  help        Show this help message")
     else:
         print(f"Unknown command: {command}")
         print("Run 'anki-gpt help' for usage information")
