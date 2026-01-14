@@ -16,27 +16,34 @@ ALLOWED_MODELS = [
 
 ALLOWED_EFFORTS = ["minimal", "low", "medium", "high"]
 
+ALLOWED_VERBOSITIES = ["low", "medium", "high"]
+
 @dataclass
 class UserConfig:
     model: str = "gpt-5-nano"
     effort: str = "minimal"
+    verbosity: str = "medium"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'UserConfig':
         model = data.get("model", "gpt-5-nano")
         effort = data.get("effort", "minimal")
+        verbosity = data.get("verbosity", "medium")
 
         if model not in ALLOWED_MODELS:
             model = "gpt-5-nano"
         if effort not in ALLOWED_EFFORTS:
             effort = "minimal"
+        if verbosity not in ALLOWED_VERBOSITIES:
+            verbosity = "medium"
 
-        return cls(model=model, effort=effort)
+        return cls(model=model, effort=effort, verbosity=verbosity)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "model": self.model,
-            "effort": self.effort
+            "effort": self.effort,
+            "verbosity": self.verbosity
         }
 
 _user_config_cache: Dict[int, UserConfig] = {}
@@ -81,6 +88,8 @@ def set_user_setting(user_id: int, key: str, value: Any) -> bool:
         return False
     if key == "effort" and value not in ALLOWED_EFFORTS:
         return False
+    if key == "verbosity" and value not in ALLOWED_VERBOSITIES:
+        return False
 
     settings = load_user_settings()
     user_id_str = str(user_id)
@@ -101,3 +110,6 @@ def set_user_model(user_id: int, model: str) -> bool:
 
 def set_user_effort(user_id: int, effort: str) -> bool:
     return set_user_setting(user_id, "effort", effort)
+
+def set_user_verbosity(user_id: int, verbosity: str) -> bool:
+    return set_user_setting(user_id, "verbosity", verbosity)

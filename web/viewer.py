@@ -25,10 +25,8 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 word_service = WordService()
 
-# Set up better model for web interface regeneration (user_id=0)
+# Web interface user ID
 WEB_USER_ID = 0
-web_config = UserConfig(model="gpt-5-mini", effort="medium")
-set_user_config(WEB_USER_ID, web_config)
 
 def build_pagination_url(page, query, sort_by, order):
     """Build URL query string for pagination."""
