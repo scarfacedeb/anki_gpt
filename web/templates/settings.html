@@ -206,7 +206,7 @@
             <div class="setting-row">
                 <div class="setting-label">
                     <h3>Effort Level</h3>
-                    <p>Amount of detail in generated definitions</p>
+                    <p>Amount of reasoning effort for generation</p>
                 </div>
                 <div class="setting-control">
                     <select id="effortSelect" onchange="updateSetting('effort', this.value)">
@@ -214,6 +214,20 @@
                         <option value="low" {% if config.effort == 'low' %}selected{% endif %}>Low</option>
                         <option value="medium" {% if config.effort == 'medium' %}selected{% endif %}>Medium</option>
                         <option value="high" {% if config.effort == 'high' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-label">
+                    <h3>Verbosity</h3>
+                    <p>Level of detail in definitions and examples</p>
+                </div>
+                <div class="setting-control">
+                    <select id="verbositySelect" onchange="updateSetting('verbosity', this.value)">
+                        <option value="low" {% if config.verbosity == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if config.verbosity == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if config.verbosity == 'high' %}selected{% endif %}>High</option>
                     </select>
                 </div>
             </div>
