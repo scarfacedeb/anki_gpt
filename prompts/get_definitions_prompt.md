@@ -31,7 +31,7 @@ ALWAYS RESPOND IN ENGLISH USING PROPER JSON FORMAT.
 - **Pronunciation:** IPA notation in forward slashes
 
 ### HTML Formatting
-- For the `definition_nl`, `definition_en`, and `etymology` fields, use simple HTML tags like `<b>` for emphasis on key terms and `<i>` for clarification or examples within the text.
+- For the `definition_nl`, `definition_en`, `etymology`, and `grammar` fields, use simple HTML tags like `<b>` for emphasis on key terms and `<i>` for clarification or examples within the text.
 - Do not use block-level elements like `<p>` or `<div>`.
 
 ### Special Cases
