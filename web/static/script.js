@@ -336,6 +336,234 @@ window.onclick = function(event) {
     if (event.target === modal) {
         closeRegenerateModal();
     }
+    const inlineModal = document.getElementById('inlineRegenerateModal');
+    if (event.target === inlineModal) {
+        closeInlineRegenerateModal();
+    }
+}
+
+// Inline regeneration queue
+let regenerationQueue = [];
+
+function updateQueueDisplay() {
+    const queueBox = document.getElementById('regenerationQueue');
+    const queueList = document.getElementById('regenerationQueueList');
+    const queueCount = document.getElementById('queueCount');
+    const approveAllBtn = document.getElementById('approveAllBtn');
+
+    if (regenerationQueue.length === 0) {
+        queueBox.style.display = 'none';
+        return;
+    }
+
+    queueBox.style.display = 'block';
+    queueCount.textContent = regenerationQueue.length;
+
+    queueList.innerHTML = regenerationQueue.map((item, index) => `
+        <div class="queue-item" onclick="showQueuedItem(${index})">
+            <span class="queue-word">${item.data.current.dutch}</span>
+            <button class="queue-remove" onclick="event.stopPropagation(); removeFromQueue(${index})" title="Remove">
+                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+            </button>
+        </div>
+    `).join('');
+
+    // Reinitialize Lucide icons for newly added items
+    lucide.createIcons();
+}
+
+function removeFromQueue(index) {
+    regenerationQueue.splice(index, 1);
+    updateQueueDisplay();
+}
+
+function showQueuedItem(index) {
+    const item = regenerationQueue[index];
+    if (!item) return;
+
+    // Store current index for later confirmation
+    currentQueueIndex = index;
+
+    // Display the comparison in modal
+    displayInlineComparison(item.data.current, item.data.new);
+
+    // Show the modal
+    const modal = document.getElementById('inlineRegenerateModal');
+    modal.style.display = 'flex';
+}
+
+let currentQueueIndex = null;
+
+async function regenerateWordInline(dutch, buttonElement) {
+    // Show loading state on button
+    buttonElement.classList.add('loading');
+    buttonElement.disabled = true;
+
+    try {
+        const response = await fetch(`/regenerate/${encodeURIComponent(dutch)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Add to queue instead of showing modal immediately
+            regenerationQueue.push({
+                data: data,
+                dutch: data.current.dutch
+            });
+
+            // Update queue display
+            updateQueueDisplay();
+
+            // Remove loading state
+            buttonElement.classList.remove('loading');
+            buttonElement.disabled = false;
+        } else {
+            alert('Failed to regenerate word: ' + (data.error || 'Unknown error'));
+            buttonElement.classList.remove('loading');
+            buttonElement.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error regenerating word:', error);
+        alert('Failed to regenerate word. Please try again.');
+        buttonElement.classList.remove('loading');
+        buttonElement.disabled = false;
+    }
+}
+
+function displayInlineComparison(current, newData) {
+    const currentVersion = document.getElementById('inlineCurrentVersion');
+    const newVersion = document.getElementById('inlineNewVersion');
+
+    const fields = [
+        { key: 'translation', label: 'Translation' },
+        { key: 'pronunciation', label: 'Pronunciation' },
+        { key: 'grammar', label: 'Grammar' },
+        { key: 'level', label: 'Level' },
+        { key: 'definition_nl', label: 'Definition (NL)' },
+        { key: 'definition_en', label: 'Definition (EN)' },
+        { key: 'collocations', label: 'Collocations', isArray: true },
+        { key: 'synonyms', label: 'Synonyms', isArray: true },
+        { key: 'related', label: 'Related Words', isArray: true },
+        { key: 'examples_nl', label: 'Examples (NL)', isArray: true },
+        { key: 'examples_en', label: 'Examples (EN)', isArray: true },
+        { key: 'etymology', label: 'Etymology' }
+    ];
+
+    currentVersion.innerHTML = fields.map(field => {
+        const value = current[field.key];
+        const displayValue = field.isArray
+            ? (value && value.length > 0 ? value.join(', ') : '<em>None</em>')
+            : (value || '<em>None</em>');
+        return `
+            <div class="comparison-field">
+                <div class="comparison-label">${field.label}</div>
+                <div class="comparison-value">${displayValue}</div>
+            </div>
+        `;
+    }).join('');
+
+    newVersion.innerHTML = fields.map(field => {
+        const value = newData[field.key];
+        const displayValue = field.isArray
+            ? (value && value.length > 0 ? value.join(', ') : '<em>None</em>')
+            : (value || '<em>None</em>');
+        return `
+            <div class="comparison-field">
+                <div class="comparison-label">${field.label}</div>
+                <div class="comparison-value">${displayValue}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function confirmInlineRegeneratedWord() {
+    if (currentQueueIndex === null || !regenerationQueue[currentQueueIndex]) return;
+
+    const item = regenerationQueue[currentQueueIndex];
+
+    try {
+        const response = await fetch(`/confirm-regenerate/${encodeURIComponent(item.data.new.dutch)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(item.data.new)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Remove from queue
+            regenerationQueue.splice(currentQueueIndex, 1);
+            updateQueueDisplay();
+
+            closeInlineRegenerateModal();
+
+            // Reload if queue is empty, otherwise just close modal
+            if (regenerationQueue.length === 0) {
+                location.reload();
+            }
+        } else {
+            alert('Failed to save word: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving word:', error);
+        alert('Failed to save word. Please try again.');
+    }
+}
+
+async function approveAll() {
+    if (regenerationQueue.length === 0) return;
+
+    const approveAllBtn = document.getElementById('approveAllBtn');
+    approveAllBtn.disabled = true;
+    approveAllBtn.textContent = 'Approving...';
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process each item in the queue
+    for (let i = 0; i < regenerationQueue.length; i++) {
+        const item = regenerationQueue[i];
+        try {
+            const response = await fetch(`/confirm-regenerate/${encodeURIComponent(item.data.new.dutch)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(item.data.new)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error('Error saving word:', error);
+            failCount++;
+        }
+    }
+
+    // Clear queue and reload
+    regenerationQueue = [];
+    updateQueueDisplay();
+
+    alert(`Approved ${successCount} words. ${failCount > 0 ? `Failed: ${failCount}` : ''}`);
+    location.reload();
+}
+
+function closeInlineRegenerateModal() {
+    const modal = document.getElementById('inlineRegenerateModal');
+    modal.style.display = 'none';
+    currentQueueIndex = null;
 }
 
 // Initialize theme on page load

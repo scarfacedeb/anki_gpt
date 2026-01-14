@@ -147,18 +147,23 @@
                 </div>
                 <div class="word-translation">{{ word.translation }}</div>
                 <div class="word-grammar-pronunciation">
-                    <div class="word-grammar">{{ word.grammar[:60] }}{% if word.grammar|length > 60 %}...{% endif %}</div>
+                    <div class="word-grammar">{{ word.grammar[:60] | safe }}{% if word.grammar|length > 60 %}...{% endif %}</div>
                 </div>
                 <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
-                <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
-                    <i data-lucide="trash-2"></i>
-                </button>
+                <div class="word-actions-inline">
+                    <button class="regenerate-icon-inline" onclick="event.stopPropagation(); regenerateWordInline('{{ word.dutch | replace("'", "\\'") }}', this)" title="Regenerate word">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="word-details">
                 <div class="word-section">
                     <div class="word-label">Grammar</div>
-                    <div class="word-content">{{ word.grammar }}</div>
+                    <div class="word-content">{{ word.grammar | safe }}</div>
                 </div>
 
                 {% if word.level %}
@@ -338,6 +343,48 @@
         {% endif %}
     </div>
     {% endif %}
+
+    <!-- Regeneration Queue (Floating Box) -->
+    <div id="regenerationQueue" class="regeneration-queue">
+        <div class="queue-header">
+            <h3>
+                <i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: -3px;"></i>
+                Regenerated (<span id="queueCount">0</span>)
+            </h3>
+            <button class="btn btn-primary btn-small" id="approveAllBtn" onclick="approveAll()">
+                Approve All
+            </button>
+        </div>
+        <div class="queue-list" id="regenerationQueueList">
+            <!-- Queue items will be added here dynamically -->
+        </div>
+    </div>
+
+    <!-- Inline Regenerate Modal -->
+    <div id="inlineRegenerateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Review Regenerated Word</h2>
+                <button class="modal-close" onclick="closeInlineRegenerateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="regenerate-comparison" id="inlineRegenerateComparison">
+                    <div class="comparison-column">
+                        <h3>Current Version</h3>
+                        <div id="inlineCurrentVersion"></div>
+                    </div>
+                    <div class="comparison-column">
+                        <h3>New Version</h3>
+                        <div id="inlineNewVersion"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeInlineRegenerateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmInlineRegeneratedWord()">Apply Changes</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Regenerate Modal -->
     <div id="regenerateModal" class="modal">
