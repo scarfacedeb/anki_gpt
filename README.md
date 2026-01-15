@@ -1,113 +1,178 @@
-# AnkiGPT – Telegram bot
+# AnkiGPT
 
-Learn Dutch words using Anki flashcards with the help of GPT-4.
+Learn Dutch words using Anki flashcards with AI-powered definitions from OpenAI's GPT models.
+
+**Features:**
+- 🤖 **Telegram Bot** - Add words via Telegram
+- 🌐 **Web Interface** - Browse, search, edit, and manage words
+- 💻 **CLI Tools** - Batch operations and utilities
+- 📚 **Rich Definitions** - Etymology, examples, collocations, synonyms, and more
+- 🔄 **Anki Sync** - Bidirectional sync with Anki desktop
+- 🎨 **Dark Mode** - System-aware theme
+- ⚡ **Incremental Search** - Real-time search as you type
+- 🔧 **Customizable** - Configure model, effort level, and verbosity
+ - 🛡️ **Safe HTML** - Inline-only HTML sanitization when saving; preserves basic tags (b, i, em, strong, u, s, sub, sup, code, br), strips others, and auto-closes broken tags
 
 ## Installation
 
 1. Clone the repository
-2. Install the required packages:
+2. Install dependencies:
+   ```bash
+   uv sync
    ```
-   pip install -r requirements.txt
-   ```
-3. Make sure Anki is running with the AnkiConnect plugin installed
+3. Make sure Anki is running with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin installed
 
 ## Setup
 
-The bot requires a few environment variables to be set:
-
-```
-OPENAI_API_KEY # ChatGPT API key
-TELEGRAM_BOT_TOKEN # Telegram bot token from BotFather
-ALLOWED_USER_IDS # Comma-separated list of user ids that can use the bot
-```
-
-To set these environment variables in your shell:
+Create a `.env` file in the project root:
 
 ```bash
-export OPENAI_API_KEY="your-openai-api-key"
-export TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
-export ALLOWED_USER_IDS="123456789,987654321"
+OPENAI_API_KEY=your-openai-api-key
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token  # Optional, for Telegram bot
+ALLOWED_USER_IDS=123456789                   # Optional, for Telegram bot
 ```
 
 ## Usage
 
+### Web Interface
+
+Start the web viewer:
+
+```bash
+python web/viewer.py
+```
+
+Then open http://127.0.0.1:5000 in your browser.
+
+**Features:**
+- Browse and search all words
+- Edit word definitions
+- Regenerate individual words with AI
+- Quick add words from the header
+- Incremental search (updates as you type)
+- Regeneration queue (batch review and approve changes)
+- Dark/light theme toggle
+- Sync to/from Anki
+
+### Command Line Interface
+
+Available commands:
+
+```bash
+anki-gpt                    # Interactive mode: add words
+anki-gpt add                # Interactive mode: add words
+anki-gpt import             # Import words from Anki to database
+anki-gpt export             # Export words from database to Anki
+anki-gpt sync               # Sync all database words to Anki
+anki-gpt regenerate         # Regenerate all words without a level (batched, 10 concurrent)
+anki-gpt help               # Show help message
+```
+
 ### Telegram Bot
 
-To start the bot:
+Start the bot:
 
 ```bash
 python bot.py
 ```
 
-### Command Line Interface
+Send Dutch words or phrases to the bot, and it will:
+1. Generate comprehensive definitions using AI
+2. Save to the local database
+3. Sync to your Anki deck
+4. Send the definitions back to you
 
-To use the CLI:
+## Configuration
 
-```bash
-python main.py
-```
+### User Settings (Web Interface)
 
-Or for a simpler interface:
+Access settings at `/settings`:
+- **Model**: Choose from gpt-5-nano, gpt-5-mini, gpt-5, gpt-5.2, gpt-4o, gpt-4o-mini
+- **Effort Level**: minimal, low, medium, high (reasoning effort)
+- **Verbosity**: low, medium, high (detail level in definitions)
 
-```bash
-python cli.py
-```
+Settings are persisted per user and apply to all word generation in the web interface.
 
-## Workflow
+## Word Schema
 
-1. Send new words, phrases or whole unparsed sentences to Telegram bot.
-2. Bot passes the input to ChatGPT and return a json list of word defitions.
-3. Bot submits the new words into AnkiConnect API.
-4. Bot sends the definitions back to the user.
+Each word includes:
+- **dutch** - The Dutch word (normalized)
+- **translation** - English translation
+- **pronunciation** - IPA notation
+- **grammar** - Part of speech, gender (het/de), conjugations, word parts
+- **level** - CEFR level (A1, A2, B1, B2, C1, C2)
+- **definition_nl** - Dutch definition
+- **definition_en** - English definition
+- **examples_nl** - Dutch example sentences
+- **examples_en** - English translations of examples
+- **collocations** - Common word combinations
+- **synonyms** - Dutch synonyms
+- **related** - Etymologically related words (cross-language)
+- **etymology** - Word origin and history
+- **tags** - Custom tags
 
-### Optional
+## Architecture
 
-- Bot can send a list of all the words in the Anki deck.
-- Bot asks which words to add from the parsed sentence.
+### Key Modules
+
+**word.py**
+- Pydantic models for Word and WordList
+- JSON schema validation
+
+**chatgpt.py**
+- OpenAI API integration
+- Uses structured output parsing
+- Configurable model, effort, and verbosity
+
+**word_service.py**
+- High-level word management API
+- CRUD operations with automatic Anki sync
+- Database and Anki abstraction layer
+
+**db.py**
+- SQLite database management
+- Word storage with timestamps and Anki metadata
+
+**anki.py**
+- AnkiConnect API integration
+- Note creation, updates, and sync
+
+**web/viewer.py**
+- Flask web application
+- REST API endpoints
+- Settings management
+
+**cli.py**
+- Command-line interface
+- Batch operations (regenerate)
+- Interactive word addition
+
+## Database
+
+Words are stored in `words.db` (SQLite):
+- **words** table - Word data and metadata
+- **anki_words** table - Anki sync information
+
+## Tips
+
+### Regeneration Queue
+1. Click regenerate icon on multiple words
+2. They queue up in bottom-right floating box
+3. Click any queued word to review changes
+4. Click "Approve All" to batch-apply all changes
 
 
-## Python modules
+### Batch Regeneration
+Run `anki-gpt regenerate` to:
+- Regenerate all words without a CEFR level
+- Process 10 words concurrently for speed
+- Preserve words that already have levels
 
-### bot.py
+## Development
 
-- Listens to the user input. All input is treated as words by default.
-- Uses main module functions to run the main logic loop of adding words to the Anki deck.
-- Returns the added words to the user.
-
-### word.py
-
-- Defines json schema using Pydantic. Its top level object is a list of Word objects. Each Word object has the following fields:
-    - Word (in dutch)
-    - Translation (in english)
-    - Definition (in dutch)
-    - Definition (in english)
-    - Pronunciation
-    - Grammar (add if it's a het or de word. explain the part of speech, parts of the word, like suffix, root, etc, also how the word might change, like tenses, if applicable)
-    - Examples (give 2 examples in dutch)
-    - Examples (the same examples translated to english)
-    - Etymology (match the etymology format of wiktionary, but shorten it a bit)
-    - Related (2, 3 examples; always only add related words that are etymologically related; prioritize english, german, russian first)
-
-
-### chatgpt.py
-
-- Builds a custom propmt with the provided words or sentences.
-- Calls ChatGPT Completion API to get the definitions of the words.
-- Uses the Word pydantic defitions to parse the json response.
-- Return the completion response as a list of Word objects.
-- If called from a repl, it should print the json response.
-
-### anki.py
-
-- Connects to AnkiConnect API.
-- Adds the words to the Anki deck using the Word pydantic defitions.
-- Can list all the words in the deck.
-- If called from a repl, it should print the list of words.
-
-### main.py
-
-- Receive the input from the user.
-- Calls chatgpt module to get the definitions of the words.
-- Calls anki module to add the words to the Anki deck.
-- Returns the defitions back.
-- If called from a repl, it should return the defitions back too.
+The project uses:
+- Python 3.13+
+- Flask for web interface
+- OpenAI API for word generation
+- AnkiConnect for Anki integration
+- SQLite for local storage
