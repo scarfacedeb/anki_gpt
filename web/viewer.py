@@ -3,6 +3,7 @@ Simple HTML viewer for browsing the local word database.
 """
 import sys
 import logging
+import os
 from pathlib import Path
 
 # Add parent directory to path to import from main package
@@ -525,7 +526,7 @@ def main():
 
     print("Starting Anki GPT Word Viewer...")
     print("Open http://127.0.0.1:5000 in your browser")
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=os.environ.get("DEBUG") == "1", host='0.0.0.0', port=5000)
 
 if __name__ == '__main__':
     main()
