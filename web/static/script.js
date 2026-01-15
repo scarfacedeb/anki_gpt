@@ -1,10 +1,8 @@
-// Dark mode toggle with system preference detection
 function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const htmlElement = document.documentElement;
 
-    // Apply dark mode if: explicitly saved as dark, OR no saved preference and system prefers dark
     if (savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark)) {
         htmlElement.classList.add('dark-mode');
     }
@@ -17,7 +15,6 @@ function toggleTheme() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
-// Word details expand/collapse
 function toggleDetails(summaryElement) {
     const card = summaryElement.closest('.word-card');
     const details = card.querySelector('.word-details');
@@ -25,7 +22,6 @@ function toggleDetails(summaryElement) {
     details.classList.toggle('expanded');
 }
 
-// Delete word without page reload
 async function deleteWord(wordId, cardElement) {
     if (!confirm(`Are you sure you want to delete this word?`)) {
         return;
@@ -42,28 +38,24 @@ async function deleteWord(wordId, cardElement) {
         const data = await response.json();
 
         if (data.success) {
-            // Remove the card from DOM with fade out animation
             cardElement.style.opacity = '0';
             cardElement.style.transition = 'opacity 0.3s ease-out';
 
             setTimeout(() => {
                 cardElement.remove();
 
-                // Update stats in header
                 const statsElement = document.querySelector('.stats');
                 if (statsElement && data.stats) {
                     const totalWords = data.stats.total_words;
                     const synced = data.stats.synced_to_anki;
                     const unsynced = data.stats.unsynced;
 
-                    // Find the part before "Showing" to preserve pagination info
                     const showingMatch = statsElement.textContent.match(/\| Showing .+$/);
                     const showingText = showingMatch ? showingMatch[0] : '';
 
                     statsElement.textContent = `Total words: ${totalWords} | Synced to Anki: ${synced} | Unsynced: ${unsynced}${showingText}`;
                 }
 
-                // If no more cards on page, reload to show next page or empty state
                 const remainingCards = document.querySelectorAll('.word-card').length;
                 if (remainingCards === 0) {
                     location.reload();
@@ -78,8 +70,7 @@ async function deleteWord(wordId, cardElement) {
     }
 }
 
-// Quick add word - track ongoing additions
-const pendingAdditions = new Map(); // word -> status
+const pendingAdditions = new Map();
 
 async function quickAddWord() {
     const input = document.getElementById('quickAddInput');
@@ -89,13 +80,11 @@ async function quickAddWord() {
         return;
     }
 
-    // Check if already being added
     if (pendingAdditions.has(dutch)) {
         input.value = '';
         return;
     }
 
-    // Add to pending list and clear input immediately
     pendingAdditions.set(dutch, 'pending');
     input.value = '';
     input.focus();
@@ -116,10 +105,8 @@ async function quickAddWord() {
             pendingAdditions.set(dutch, 'success');
             updateFeedback();
 
-            // Add word to the list dynamically
             await addWordToList(data.word_data);
 
-            // Remove from pending after a short delay
             setTimeout(() => {
                 pendingAdditions.delete(dutch);
                 updateFeedback();
@@ -128,7 +115,6 @@ async function quickAddWord() {
             pendingAdditions.set(dutch, 'error: ' + (data.error || 'Unknown error'));
             updateFeedback();
 
-            // Remove from pending after showing error
             setTimeout(() => {
                 pendingAdditions.delete(dutch);
                 updateFeedback();
@@ -167,7 +153,6 @@ function updateFeedback() {
 
     feedback.textContent = items.join(' • ');
 
-    // Determine overall status for styling
     const hasError = Array.from(pendingAdditions.values()).some(s => s.startsWith('error:'));
     const hasSuccess = Array.from(pendingAdditions.values()).some(s => s === 'success');
     const hasPending = Array.from(pendingAdditions.values()).some(s => s === 'pending');
@@ -184,12 +169,9 @@ function updateFeedback() {
 }
 
 async function addWordToList(wordData) {
-    // Refresh the page data to get the new word with proper timestamp
-    // This is simpler than constructing the HTML manually
     const wordList = document.querySelector('.word-list');
     if (!wordList) return;
 
-    // For now, we'll just update the stats
     try {
         const response = await fetch('/api/stats');
         const stats = await response.json();
@@ -207,7 +189,6 @@ async function addWordToList(wordData) {
     }
 }
 
-// Regenerate word
 let currentRegeneratedData = null;
 let currentRegeneratedWordId = null;
 
@@ -217,7 +198,6 @@ async function regenerateWord(wordId, cardElement) {
     const comparison = document.getElementById('regenerateComparison');
     const footer = document.getElementById('modalFooter');
 
-    // Show modal with loading state
     modal.style.display = 'flex';
     loading.style.display = 'block';
     comparison.style.display = 'none';
@@ -238,7 +218,6 @@ async function regenerateWord(wordId, cardElement) {
             currentRegeneratedWordId = wordId;
             displayComparison(data.current, data.new);
 
-            // Show comparison and footer
             loading.style.display = 'none';
             comparison.style.display = 'grid';
             footer.style.display = 'flex';
@@ -315,7 +294,6 @@ async function confirmRegeneratedWord() {
 
         if (data.success) {
             closeRegenerateModal();
-            // Reload the page to show updated word
             location.reload();
         } else {
             alert('Failed to save word: ' + (data.error || 'Unknown error'));
@@ -333,7 +311,6 @@ function closeRegenerateModal() {
     currentRegeneratedWordId = null;
 }
 
-// Close modal when clicking outside
 window.onclick = function(event) {
     const modal = document.getElementById('regenerateModal');
     if (event.target === modal) {
@@ -345,7 +322,6 @@ window.onclick = function(event) {
     }
 }
 
-// Inline regeneration queue
 let regenerationQueue = [];
 
 function updateQueueDisplay() {
@@ -371,7 +347,6 @@ function updateQueueDisplay() {
         </div>
     `).join('');
 
-    // Reinitialize Lucide icons for newly added items
     lucide.createIcons();
 }
 
@@ -384,13 +359,10 @@ function showQueuedItem(index) {
     const item = regenerationQueue[index];
     if (!item) return;
 
-    // Store current index for later confirmation
     currentQueueIndex = index;
 
-    // Display the comparison in modal
     displayInlineComparison(item.data.current, item.data.new);
 
-    // Show the modal
     const modal = document.getElementById('inlineRegenerateModal');
     modal.style.display = 'flex';
 }
@@ -398,7 +370,6 @@ function showQueuedItem(index) {
 let currentQueueIndex = null;
 
 async function regenerateWordInline(wordId, buttonElement) {
-    // Show loading state on button
     buttonElement.classList.add('loading');
     buttonElement.disabled = true;
 
@@ -413,17 +384,14 @@ async function regenerateWordInline(wordId, buttonElement) {
         const data = await response.json();
 
         if (data.success) {
-            // Add to queue with ID
             regenerationQueue.push({
                 data: data,
                 id: wordId,
                 dutch: data.current.dutch
             });
 
-            // Update queue display
             updateQueueDisplay();
 
-            // Remove loading state
             buttonElement.classList.remove('loading');
             buttonElement.disabled = false;
         } else {
@@ -502,13 +470,11 @@ async function confirmInlineRegeneratedWord() {
         const data = await response.json();
 
         if (data.success) {
-            // Remove from queue
             regenerationQueue.splice(currentQueueIndex, 1);
             updateQueueDisplay();
 
             closeInlineRegenerateModal();
 
-            // Reload if queue is empty, otherwise just close modal
             if (regenerationQueue.length === 0) {
                 location.reload();
             }
@@ -531,7 +497,6 @@ async function approveAll() {
     let successCount = 0;
     let failCount = 0;
 
-    // Process each item in the queue
     for (let i = 0; i < regenerationQueue.length; i++) {
         const item = regenerationQueue[i];
         try {
@@ -556,7 +521,6 @@ async function approveAll() {
         }
     }
 
-    // Clear queue and reload
     regenerationQueue = [];
     updateQueueDisplay();
 
@@ -570,9 +534,6 @@ function closeInlineRegenerateModal() {
     currentQueueIndex = null;
 }
 
-// Keep minimal initialization only
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
 });
-
-// Initialize theme on page load handled above
