@@ -166,6 +166,47 @@ class WordService:
         logger.info(f"Updated word: {word.dutch} (synced: {synced})")
         return word, synced
 
+    def update_by_id(self, word_id: int, word: Word) -> tuple[Word, bool]:
+        """
+        Update an existing word by its ID and sync changes to Anki.
+
+        Args:
+            word_id: Database row ID for the word
+            word: Word object with updated fields
+
+        Returns:
+            Tuple of (word, synced_to_anki)
+        """
+        # Add level as tag if needed to keep parity with normal save flow
+        if word.level and word.level not in word.tags:
+            word.tags.append(word.level)
+
+        # Update in database by ID
+        updated = self.db.update_word_by_id(word_id, word)
+        if not updated:
+            logger.warning(f"Word not found for update by ID: {word_id}")
+            # Fallback to create to avoid data loss
+            db_row_id, anki_note_id = self._save_and_sync_word(word)
+            synced = anki_note_id is not None
+            logger.info(f"Fallback created word: {word.dutch} (synced: {synced})")
+            return word, synced
+
+        # Sync to Anki
+        anki_note_id = self._sync_word_to_anki(word)
+
+        synced = anki_note_id is not None
+
+        # Mark as synced using ID if we have a note ID
+        if anki_note_id:
+            try:
+                self.db.mark_synced_by_id(word_id, anki_note_id, self.deck_name)
+                logger.info(f"Marked word (ID: {word_id}) as synced")
+            except Exception as e:
+                logger.error(f"Failed to mark word as synced by ID {word_id}: {e}")
+
+        logger.info(f"Updated word by ID: {word.dutch} (ID: {word_id}, synced: {synced})")
+        return word, synced
+
     def get(self, dutch: str) -> Optional[Word]:
         """
         Get a word by its Dutch text.
@@ -181,6 +222,23 @@ class WordService:
             logger.debug(f"Retrieved word: {dutch}")
         else:
             logger.debug(f"Word not found: {dutch}")
+        return word
+
+    def get_by_id(self, word_id: int) -> Optional[Word]:
+        """
+        Get a word by its ID.
+
+        Args:
+            word_id: The word ID to retrieve
+
+        Returns:
+            Word object if found, None otherwise
+        """
+        word = self.db.get_word_by_id(word_id)
+        if word:
+            logger.debug(f"Retrieved word by ID: {word_id}")
+        else:
+            logger.debug(f"Word not found by ID: {word_id}")
         return word
 
     def delete(self, dutch: str, delete_from_anki: bool = True) -> tuple[bool, bool]:
@@ -221,6 +279,53 @@ class WordService:
                 logger.info(f"Deleted word from Anki: {dutch} (note_id: {anki_note_id})")
             else:
                 logger.warning(f"Failed to delete word from Anki: {dutch}")
+
+        return db_deleted, anki_deleted
+
+    def delete_by_id(self, word_id: int, delete_from_anki: bool = True) -> tuple[bool, bool]:
+        """
+        Delete a word from the database by ID and optionally from Anki.
+
+        Args:
+            word_id: The word ID to delete
+            delete_from_anki: If True, also delete from Anki (default: True)
+
+        Returns:
+            Tuple of (deleted_from_db, deleted_from_anki)
+            - deleted_from_db: True if deleted from database
+            - deleted_from_anki: True if deleted from Anki (or N/A if not synced)
+
+        Note:
+            If the word was synced to Anki and delete_from_anki is True,
+            it will be removed from both the database and Anki.
+        """
+        # Get the word first for logging
+        word = self.db.get_word_by_id(word_id)
+        if not word:
+            logger.warning(f"Word not found for deletion by ID: {word_id}")
+            return False, False
+
+        # Get sync info before deleting from DB
+        sync_info = self.db.get_sync_info_by_id(word_id)
+        anki_note_id = sync_info.get('anki_note_id') if sync_info else None
+
+        # Delete from database (this also deletes from anki_words via CASCADE)
+        db_deleted = self.db.delete_word_by_id(word_id)
+
+        if not db_deleted:
+            logger.warning(f"Failed to delete word by ID: {word_id}")
+            return False, False
+
+        logger.info(f"Deleted word from database: {word.dutch} (ID: {word_id})")
+
+        # Delete from Anki if it was synced and deletion is enabled
+        anki_deleted = None  # Default: N/A (not synced or sync disabled)
+        if delete_from_anki and anki_note_id and ENABLE_ANKI_SYNC:
+            anki_deleted = delete_note(anki_note_id)
+            if anki_deleted:
+                logger.info(f"Deleted word from Anki: {word.dutch} (note_id: {anki_note_id})")
+            else:
+                logger.warning(f"Failed to delete word from Anki: {word.dutch}")
 
         return db_deleted, anki_deleted
 

@@ -128,7 +128,7 @@
 
     <div class="word-list">
         {% for word, created_at, updated_at, anki_info, search_priority in words_data %}
-        <div class="word-card">
+        <div class="word-card" data-word-id="{{ anki_info.id }}">
             <div class="word-summary" onclick="toggleDetails(this)">
                 <div class="word-dutch">
                     {{ word.dutch }}
@@ -147,14 +147,14 @@
                 </div>
                 <div class="word-translation">{{ word.translation }}</div>
                 <div class="word-grammar-pronunciation">
-                    <div class="word-grammar">{{ word.grammar[:60] | safe }}{% if word.grammar|length > 60 %}...{% endif %}</div>
+                    <div class="word-grammar">{{ word.grammar | striptags | truncate(60, True, '...') }}</div>
                 </div>
-                <div class="word-preview">{{ word.definition_nl[:80] }}...</div>
+                <div class="word-preview">{{ word.definition_nl | striptags | truncate(80, True, '...') }}</div>
                 <div class="word-actions-inline">
-                    <button class="regenerate-icon-inline" onclick="event.stopPropagation(); regenerateWordInline('{{ word.dutch | replace("'", "\\'") }}', this)" title="Regenerate word">
+                    <button class="regenerate-icon-inline" onclick="event.stopPropagation(); regenerateWordInline({{ anki_info.id }}, this)" title="Regenerate word">
                         <i data-lucide="refresh-cw"></i>
                     </button>
-                    <button class="delete-icon" onclick="event.stopPropagation(); deleteWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))" title="Delete word">
+                    <button class="delete-icon" onclick="event.stopPropagation(); deleteWord({{ anki_info.id }}, this.closest('.word-card'))" title="Delete word">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
@@ -238,15 +238,15 @@
                 {% endif %}
 
                 <div class="word-section">
-                    <div class="word-label">Anki Sync Info</div>
+                    <div class="word-label">Metadata</div>
                     <div class="word-content">
                         {% if anki_info.synced %}
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
+                                <span style="color: var(--text-dim);">ID:</span>
+                                <span>{{ anki_info.id }}</span>
+
                                 <span style="color: var(--text-dim);">Status:</span>
                                 <span style="color: #10b981; font-weight: 500;">✓ Synced to Anki</span>
-
-                                <span style="color: var(--text-dim);">Deck:</span>
-                                <span>{{ anki_info.deck_name or 'Default' }}</span>
 
                                 {% if anki_info.synced_at %}
                                 <span style="color: var(--text-dim);">Last synced:</span>
@@ -284,20 +284,26 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
-                                <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>
-                                Not synced to Anki
-                            </span>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
+                                <span style="color: var(--text-dim);">ID:</span>
+                                <span>{{ anki_info.id }}</span>
+
+                                <span style="color: var(--text-dim);">Status:</span>
+                                <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>
+                                    Not synced to Anki
+                                </span>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
 
                 <div class="word-actions">
-                    <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord('{{ word.dutch | replace("'", "\\'") }}', this.closest('.word-card'))">
+                    <button class="btn btn-regenerate" onclick="event.stopPropagation(); regenerateWord({{ anki_info.id }}, this.closest('.word-card'))">
                         <i data-lucide="refresh-cw" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
                         Regenerate
                     </button>
-                    <a href="/edit/{{ word.dutch | urlencode }}" class="btn btn-edit" onclick="event.stopPropagation()">
+                    <a href="/edit/{{ anki_info.id }}" class="btn btn-edit" onclick="event.stopPropagation()">
                         <i data-lucide="pencil" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
                         Edit
                     </a>

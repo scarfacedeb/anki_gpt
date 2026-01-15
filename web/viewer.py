@@ -82,9 +82,9 @@ def get_words_with_timestamps(query=None):
 
             # Extract Anki sync info
             anki_info = {
+                'id': row['id'],
                 'synced': row['synced_at'] is not None,
                 'note_id': row['anki_note_id'],
-                'deck_name': row['deck_name'],
                 'synced_at': row['synced_at'],
                 'sync_count': row['sync_count'],
                 'reviews': row['reviews'],
@@ -181,16 +181,15 @@ def index():
         zip=zip
     )
 
-@app.route('/delete/<path:dutch>', methods=['POST'])
-def delete_word(dutch):
-    """Delete a word from the database and Anki."""
-    dutch = dutch.lower() # Normalize to lowercase
-    db_deleted, anki_deleted = word_service.delete(dutch)
+@app.route('/delete/<int:word_id>', methods=['POST'])
+def delete_word(word_id):
+    """Delete a word from the database and Anki by ID."""
+    db_deleted, anki_deleted = word_service.delete_by_id(word_id)
 
     if db_deleted:
-        logger.info(f"Deleted word from database: {dutch} (Anki: {anki_deleted})")
+        logger.info(f"Deleted word from database: ID {word_id} (Anki: {anki_deleted})")
     else:
-        logger.warning(f"Failed to delete word: {dutch}")
+        logger.warning(f"Failed to delete word: ID {word_id}")
 
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax'):
@@ -251,6 +250,8 @@ def get_stats_api():
     """Get database statistics as JSON."""
     stats = word_service.get_stats()
     return jsonify(stats)
+
+
 
 @app.route('/settings')
 def settings():
@@ -411,20 +412,18 @@ def sync_from_anki_status_api():
             'last_result': sync_from_anki_status['last_result']
         })
 
-@app.route('/edit/<path:dutch>', methods=['GET'])
-def edit_word(dutch):
+@app.route('/edit/<int:word_id>', methods=['GET'])
+def edit_word(word_id):
     """Show edit form for a word."""
-    dutch = dutch.lower() # Normalize to lowercase
-    word = word_service.get(dutch)
+    word = word_service.get_by_id(word_id)
     if not word:
         return redirect(url_for('index'))
 
-    return render_template('edit.html', word=word)
+    return render_template('edit.html', word=word, word_id=word_id)
 
-@app.route('/update/<path:dutch>', methods=['POST'])
-def update_word(dutch):
+@app.route('/update/<int:word_id>', methods=['POST'])
+def update_word(word_id):
     """Update a word in the database."""
-    dutch = dutch.lower() # Normalize to lowercase
     # Get form data
     word_data = {
         'dutch': request.form.get('dutch'),
@@ -446,24 +445,23 @@ def update_word(dutch):
     # Create Word object
     word = Word(**word_data)
 
-    # Save to database and sync to Anki
-    _, synced = word_service.update(word)
-    logger.info(f"Updated word: {word.dutch} (synced: {synced})")
+    # Save to database by ID and sync to Anki
+    _, synced = word_service.update_by_id(word_id, word)
+    logger.info(f"Updated word by ID: {word.dutch} (ID: {word_id}, synced: {synced})")
 
     return redirect(url_for('index'))
 
-@app.route('/regenerate/<path:dutch>', methods=['POST'])
-def regenerate_word(dutch):
+@app.route('/regenerate/<int:word_id>', methods=['POST'])
+def regenerate_word(word_id):
     """Regenerate a word using ChatGPT with gpt-5-mini and medium effort."""
-    dutch = dutch.lower() # Normalize to lowercase
     try:
         # Get the current word
-        current_word = word_service.get(dutch)
+        current_word = word_service.get_by_id(word_id)
         if not current_word:
             return jsonify({'success': False, 'error': 'Word not found'}), 404
 
         # Regenerate using ChatGPT (uses gpt-5-mini with medium effort)
-        result = get_definitions(dutch, user_id=WEB_USER_ID)
+        result = get_definitions(current_word.dutch, user_id=WEB_USER_ID)
 
         if not result.words or len(result.words) == 0:
             return jsonify({'success': False, 'error': 'Failed to regenerate word'}), 500
@@ -480,15 +478,14 @@ def regenerate_word(dutch):
         logger.error(f"Error regenerating word: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/confirm-regenerate/<path:dutch>', methods=['POST'])
-def confirm_regenerate(dutch):
+@app.route('/confirm-regenerate/<int:word_id>', methods=['POST'])
+def confirm_regenerate(word_id):
     """Confirm and save the regenerated word."""
-    dutch = dutch.lower() # Normalize to lowercase
     try:
         word_data = request.json
         word = Word(**word_data)
-        _, synced = word_service.update(word)
-        logger.info(f"Confirmed regenerated word: {word.dutch} (synced: {synced})")
+        _, synced = word_service.update_by_id(word_id, word)
+        logger.info(f"Confirmed regenerated word by ID: {word.dutch} (ID: {word_id}, synced: {synced})")
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Error saving regenerated word: {e}", exc_info=True)

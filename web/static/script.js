@@ -26,13 +26,13 @@ function toggleDetails(summaryElement) {
 }
 
 // Delete word without page reload
-async function deleteWord(dutch, cardElement) {
-    if (!confirm(`Are you sure you want to delete ${dutch}?`)) {
+async function deleteWord(wordId, cardElement) {
+    if (!confirm(`Are you sure you want to delete this word?`)) {
         return;
     }
 
     try {
-        const response = await fetch(`/delete/${encodeURIComponent(dutch)}?ajax=1`, {
+        const response = await fetch(`/delete/${wordId}?ajax=1`, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -209,8 +209,9 @@ async function addWordToList(wordData) {
 
 // Regenerate word
 let currentRegeneratedData = null;
+let currentRegeneratedWordId = null;
 
-async function regenerateWord(dutch, cardElement) {
+async function regenerateWord(wordId, cardElement) {
     const modal = document.getElementById('regenerateModal');
     const loading = document.getElementById('regenerateLoading');
     const comparison = document.getElementById('regenerateComparison');
@@ -223,7 +224,7 @@ async function regenerateWord(dutch, cardElement) {
     footer.style.display = 'none';
 
     try {
-        const response = await fetch(`/regenerate/${encodeURIComponent(dutch)}`, {
+        const response = await fetch(`/regenerate/${wordId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -234,6 +235,7 @@ async function regenerateWord(dutch, cardElement) {
 
         if (data.success) {
             currentRegeneratedData = data.new;
+            currentRegeneratedWordId = wordId;
             displayComparison(data.current, data.new);
 
             // Show comparison and footer
@@ -298,10 +300,10 @@ function displayComparison(current, newData) {
 }
 
 async function confirmRegeneratedWord() {
-    if (!currentRegeneratedData) return;
+    if (!currentRegeneratedData || currentRegeneratedWordId === null) return;
 
     try {
-        const response = await fetch(`/confirm-regenerate/${encodeURIComponent(currentRegeneratedData.dutch)}`, {
+        const response = await fetch(`/confirm-regenerate/${currentRegeneratedWordId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -328,6 +330,7 @@ function closeRegenerateModal() {
     const modal = document.getElementById('regenerateModal');
     modal.style.display = 'none';
     currentRegeneratedData = null;
+    currentRegeneratedWordId = null;
 }
 
 // Close modal when clicking outside
@@ -394,13 +397,13 @@ function showQueuedItem(index) {
 
 let currentQueueIndex = null;
 
-async function regenerateWordInline(dutch, buttonElement) {
+async function regenerateWordInline(wordId, buttonElement) {
     // Show loading state on button
     buttonElement.classList.add('loading');
     buttonElement.disabled = true;
 
     try {
-        const response = await fetch(`/regenerate/${encodeURIComponent(dutch)}`, {
+        const response = await fetch(`/regenerate/${wordId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -410,9 +413,10 @@ async function regenerateWordInline(dutch, buttonElement) {
         const data = await response.json();
 
         if (data.success) {
-            // Add to queue instead of showing modal immediately
+            // Add to queue with ID
             regenerationQueue.push({
                 data: data,
+                id: wordId,
                 dutch: data.current.dutch
             });
 
@@ -487,7 +491,7 @@ async function confirmInlineRegeneratedWord() {
     const item = regenerationQueue[currentQueueIndex];
 
     try {
-        const response = await fetch(`/confirm-regenerate/${encodeURIComponent(item.data.new.dutch)}`, {
+        const response = await fetch(`/confirm-regenerate/${item.id}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -531,7 +535,7 @@ async function approveAll() {
     for (let i = 0; i < regenerationQueue.length; i++) {
         const item = regenerationQueue[i];
         try {
-            const response = await fetch(`/confirm-regenerate/${encodeURIComponent(item.data.new.dutch)}`, {
+            const response = await fetch(`/confirm-regenerate/${item.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -566,5 +570,9 @@ function closeInlineRegenerateModal() {
     currentQueueIndex = null;
 }
 
-// Initialize theme on page load
-document.addEventListener('DOMContentLoaded', initTheme);
+// Keep minimal initialization only
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+});
+
+// Initialize theme on page load handled above

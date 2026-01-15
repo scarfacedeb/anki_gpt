@@ -53,7 +53,7 @@
     </header>
 
     <div class="edit-form">
-        <form method="POST" action="/update/{{ word.dutch | urlencode }}">
+        <form method="POST" action="/update/{{ word_id }}">
             <div class="form-group">
                 <label class="form-label">Dutch Word</label>
                 <input type="text" name="dutch" class="form-input" value="{{ word.dutch }}" required>
