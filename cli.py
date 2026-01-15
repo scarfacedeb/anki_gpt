@@ -2,7 +2,7 @@ import sys
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
-from chatgpt import get_definitions
+from chatgpt import get_definitions, generate_tags
 from anki import sync_anki
 from word import Word, WordList
 from word_service import WordService
@@ -155,16 +155,94 @@ def cmd_regenerate():
         print(f"\nFailed words: {', '.join(failed_words)}")
 
 
+def cmd_generate_tags():
+    """Generate tags for words in the database."""
+    word_service = WordService()
+    all_words = word_service.get_all()
+    
+    force_all = '--force' in sys.argv
+    
+    if force_all:
+        words_to_tag = all_words
+        skipped_count = 0
+    else:
+        words_to_tag = [word for word in all_words if not word.tags]
+        skipped_count = len(all_words) - len(words_to_tag)
+
+    total_to_tag = len(words_to_tag)
+
+    print(f"Found {len(all_words)} total words:")
+    print(f"  - {total_to_tag} words to tag")
+    if not force_all:
+        print(f"  - {skipped_count} words to skip (already have tags)")
+
+    if total_to_tag == 0:
+        print("✅ No words to tag!")
+        return
+
+    response = input(f"\nProceed with generating tags for {total_to_tag} words in batches of 10? (y/n): ")
+    if response.lower() != 'y':
+        print("Cancelled.")
+        return
+        
+    print("\nStarting tag generation (batches of 10)...")
+    success_count = 0
+    failed_words = []
+    completed_count = 0
+
+    def process_word_tags(word):
+        """Generate and update tags for a single word."""
+        try:
+            tags = generate_tags(word, user_id=0)
+            if tags:
+                word.tags = tags
+                _, _ = word_service.update(word)
+                return (True, word.dutch, ", ".join(tags))
+            else:
+                return (False, word.dutch, "No tags generated")
+        except Exception as e:
+            return (False, word.dutch, str(e))
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_word = {executor.submit(process_word_tags, word): word for word in words_to_tag}
+
+        for future in as_completed(future_to_word):
+            word = future_to_word[future]
+            completed_count += 1
+            
+            try:
+                success, dutch, info = future.result()
+                if success:
+                    success_count += 1
+                    print(f"[{completed_count}/{total_to_tag}] ✓ {dutch} (tags: {info})")
+                else:
+                    failed_words.append(dutch)
+                    print(f"[{completed_count}/{total_to_tag}] ✗ {dutch} - {info}")
+            except Exception as e:
+                failed_words.append(word.dutch)
+                print(f"[{completed_count}/{total_to_tag}] ✗ {word.dutch} - Error: {e}")
+
+    print(f"\n{'='*60}")
+    print(f"Tag generation complete!")
+    print(f"  ✓ Success: {success_count}/{total_to_tag}")
+    if not force_all:
+        print(f"  ○ Skipped: {skipped_count}")
+    if failed_words:
+        print(f"  ✗ Failed: {len(failed_words)}")
+        print(f"\nFailed words: {', '.join(failed_words)}")
+
+
 def cmd_help():
     """Show help message."""
     print("Usage: anki-gpt-cli [command]")
     print("\nCommands:")
-    print("  add          Add words via ChatGPT (interactive)")
-    print("  import       Import words from Anki to database")
-    print("  export       Export words from database to Anki")
-    print("  sync         Sync all database words to Anki")
-    print("  regenerate   Regenerate all words without a level")
-    print("  help         Show this help message")
+    print("  add              Add words via ChatGPT (interactive)")
+    print("  import           Import words from Anki to database")
+    print("  export           Export words from database to Anki")
+    print("  sync             Sync all database words to Anki")
+    print("  regenerate       Regenerate all words without a level")
+    print("  generate-tags    Generate tags for words without them")
+    print("  help             Show this help message")
 
 def main():
     """CLI entry point for anki-gpt-cli command."""
@@ -190,6 +268,8 @@ def main():
         cmd_sync()
     elif command == "regenerate":
         cmd_regenerate()
+    elif command == "generate-tags":
+        cmd_generate_tags()
     elif command == "help":
         cmd_help()
     else:
