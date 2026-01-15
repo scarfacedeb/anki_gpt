@@ -222,8 +222,8 @@
                     <div class="examples">
                         {% for nl, en in zip(word.examples_nl, word.examples_en) %}
                         <div class="example-item">
-                            <div class="example-nl">{{ nl }}</div>
-                            <div class="example-en">{{ en }}</div>
+                            <div class="example-nl">{{ nl | safe }}</div>
+                            <div class="example-en">{{ en | safe }}</div>
                         </div>
                         {% endfor %}
                     </div>
