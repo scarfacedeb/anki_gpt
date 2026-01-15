@@ -85,12 +85,12 @@ def cmd_regenerate():
         return
 
     # Ask for confirmation
-    response = input(f"\nProceed with regenerating {to_regenerate_count} words in batches of 5? (y/n): ")
+    response = input(f"\nProceed with regenerating {to_regenerate_count} words in batches of 10? (y/n): ")
     if response.lower() != 'y':
         print("Cancelled.")
         return
 
-    print("\nStarting regeneration (batches of 5)...")
+    print("\nStarting regeneration (batches of 10)...")
     success_count = 0
     failed_words = []
     completed_count = 0
@@ -108,8 +108,8 @@ def cmd_regenerate():
         except Exception as e:
             return (False, word.dutch, str(e))
 
-    # Process in batches of 5
-    batch_size = 5
+    # Process in batches of 10
+    batch_size = 10
     with ThreadPoolExecutor(max_workers=batch_size) as executor:
         # Submit all tasks
         future_to_word = {executor.submit(regenerate_word, word): word for word in words_to_regenerate}
@@ -139,11 +139,22 @@ def cmd_regenerate():
         print(f"  ✗ Failed: {len(failed_words)}")
         print(f"\nFailed words: {', '.join(failed_words)}")
 
+
+def cmd_help():
+    """Show help message."""
+    print("Usage: anki-gpt-cli [command]")
+    print("\nCommands:")
+    print("  add          Add words via ChatGPT (interactive)")
+    print("  import       Import words from Anki to database")
+    print("  export       Export words from database to Anki")
+    print("  sync         Sync all database words to Anki")
+    print("  regenerate   Regenerate all words without a level")
+    print("  help         Show this help message")
+
 def main():
     """CLI entry point for anki-gpt-cli command."""
     if len(sys.argv) < 2:
-        # Default: interactive add mode
-        cmd_add()
+        cmd_help()
         return
 
     command = sys.argv[1]
@@ -165,17 +176,10 @@ def main():
     elif command == "regenerate":
         cmd_regenerate()
     elif command == "help":
-        print("Usage: anki-gpt [command]")
-        print("\nCommands:")
-        print("  add         Add words via ChatGPT (default, interactive)")
-        print("  import      Import words from Anki to database")
-        print("  export      Export words from database to Anki")
-        print("  sync        Sync all database words to Anki")
-        print("  regenerate  Regenerate all words without a level")
-        print("  help        Show this help message")
+        cmd_help()
     else:
         print(f"Unknown command: {command}")
-        print("Run 'anki-gpt help' for usage information")
+        print("Run 'anki-gpt-cli help' for usage information")
         sys.exit(1)
 
 if __name__ == "__main__":
