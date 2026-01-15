@@ -33,9 +33,19 @@ class WordDatabase:
         self.db_path = Path(db_path)
         self.init_database()
 
+    def _connect(self) -> sqlite3.Connection:
+        """Create a SQLite connection with foreign keys and Row factory enabled."""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+        except sqlite3.OperationalError:
+            pass
+        conn.row_factory = sqlite3.Row
+        return conn
+
     def init_database(self):
         """Initialize the database and create tables if they don't exist."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             # Create words table (core word data)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS words (
@@ -93,6 +103,7 @@ class WordDatabase:
             self._migrate_add_level_column(conn)
             self._migrate_add_tags_column(conn)
             self._migrate_add_score_column(conn)
+            self._migrate_drop_legacy_anki_columns(conn)
 
     def _migrate_legacy_anki_data(self, conn):
         """Migrate data from legacy synced_to_anki and anki_note_id columns to anki_words table."""
@@ -178,6 +189,86 @@ class WordDatabase:
             cursor.execute("ALTER TABLE words ADD COLUMN score INTEGER DEFAULT 1")
             conn.commit()
 
+    def _migrate_drop_legacy_anki_columns(self, conn):
+        """Drop legacy Anki-related columns from words table if present.
+
+        Specifically removes words.synced_to_anki and words.anki_note_id and the idx_synced index.
+        Uses SQLite table-rebuild pattern to drop columns safely.
+        """
+        cursor = conn.cursor()
+
+        # Check if legacy columns exist
+        cursor.execute("PRAGMA table_info(words)")
+        cols = [row[1] for row in cursor.fetchall()]
+        needs_drop = ('synced_to_anki' in cols) or ('anki_note_id' in cols)
+        if not needs_drop:
+            return
+
+        # Drop legacy index if it exists before rebuilding
+        try:
+            cursor.execute("DROP INDEX IF EXISTS idx_synced")
+        except sqlite3.OperationalError:
+            pass
+
+        # Rebuild table without the legacy columns
+        # 1) Rename existing table
+        cursor.execute("ALTER TABLE words RENAME TO words_old")
+
+        # 2) Create new table (without legacy columns)
+        cursor.execute(
+            """
+            CREATE TABLE words (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dutch TEXT NOT NULL,
+                translation TEXT NOT NULL,
+                definition_nl TEXT NOT NULL,
+                definition_en TEXT NOT NULL,
+                pronunciation TEXT NOT NULL,
+                grammar TEXT NOT NULL,
+                collocations TEXT NOT NULL,
+                synonyms TEXT NOT NULL,
+                examples_nl TEXT NOT NULL,
+                examples_en TEXT NOT NULL,
+                etymology TEXT NOT NULL,
+                related TEXT NOT NULL,
+                level TEXT DEFAULT '',
+                tags TEXT DEFAULT '[]',
+                score INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(dutch)
+            )
+            """
+        )
+
+        # 3) Copy data from old to new (only the columns we keep)
+        cursor.execute(
+            """
+            INSERT INTO words (
+                id, dutch, translation, definition_nl, definition_en, pronunciation,
+                grammar, collocations, synonyms, examples_nl, examples_en, etymology,
+                related, level, tags, score, created_at, updated_at
+            )
+            SELECT 
+                id, dutch, translation, definition_nl, definition_en, pronunciation,
+                grammar, collocations, synonyms, examples_nl, examples_en, etymology,
+                related,
+                COALESCE(level, ''),
+                COALESCE(tags, '[]'),
+                COALESCE(score, 1),
+                created_at, updated_at
+            FROM words_old
+            """
+        )
+
+        # 4) Drop old table
+        cursor.execute("DROP TABLE words_old")
+
+        # 5) Recreate indexes used by the app
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_dutch ON words(dutch)")
+
+        conn.commit()
+
     def _normalize_dutch(self, dutch: str) -> str:
         """Normalize dutch text: trim whitespace and lowercase for consistent storage/lookup."""
         return dutch.strip().lower()
@@ -245,6 +336,8 @@ class WordDatabase:
         """
         word_dict = self._word_to_dict(word)
         normalized = self._normalize_dutch(word.dutch)
+
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             # Check if a logically equivalent word already exists (case/space-insensitive)
@@ -283,10 +376,31 @@ class WordDatabase:
         """Save multiple words to the database. Returns list of row IDs."""
         return [self.save_word(word) for word in words]
 
+    def update_word_by_id(self, word_id: int, word: Word) -> bool:
+        """Update a word by its row ID. Returns True if updated."""
+        word_dict = self._word_to_dict(word)
+        with self._connect() as conn:
+            cursor = conn.cursor()
+
+            # Ensure updated_at is set
+            word_dict['updated_at'] = datetime.now().isoformat()
+
+            placeholders = ', '.join([f"{key} = ?" for key in word_dict.keys()])
+            values = list(word_dict.values()) + [word_id]
+
+            cursor.execute(
+                f"""
+                UPDATE words SET {placeholders} WHERE id = ?
+                """,
+                values,
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
     def get_word(self, dutch: str) -> Optional[Word]:
         """Get a word by its Dutch text."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        dutch = self._normalize_dutch(dutch)
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             cursor.execute("SELECT * FROM words WHERE dutch = ?", (dutch,))
@@ -296,10 +410,21 @@ class WordDatabase:
                 return self._dict_to_word(dict(row))
             return None
 
+    def get_word_by_id(self, word_id: int) -> Optional[Word]:
+        """Get a word by its ID."""
+        with self._connect() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT * FROM words WHERE id = ?", (word_id,))
+            row = cursor.fetchone()
+
+            if row:
+                return self._dict_to_word(dict(row))
+            return None
+
     def get_all_words(self) -> List[Word]:
         """Get all words from the database."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             cursor.execute("SELECT * FROM words ORDER BY created_at DESC")
@@ -309,8 +434,7 @@ class WordDatabase:
 
     def get_unsynced_words(self) -> List[Word]:
         """Get all words that haven't been synced to Anki yet."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             # Get words that don't have an entry in anki_words or have NULL synced_at
@@ -326,7 +450,8 @@ class WordDatabase:
 
     def mark_synced(self, dutch: str, anki_note_id: Optional[int] = None, deck_name: str = "Default"):
         """Mark a word as synced to Anki."""
-        with sqlite3.connect(self.db_path) as conn:
+        dutch = self._normalize_dutch(dutch)
+        with self._connect() as conn:
             cursor = conn.cursor()
             timestamp = datetime.now().isoformat()
 
@@ -351,12 +476,41 @@ class WordDatabase:
 
             conn.commit()
 
+    def mark_synced_by_id(self, word_id: int, anki_note_id: Optional[int] = None, deck_name: str = "Default"):
+        """Mark a word as synced to Anki using its ID."""
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            timestamp = datetime.now().isoformat()
+
+            cursor.execute(
+                """
+                INSERT INTO anki_words (word_id, anki_note_id, deck_name, synced_at, last_updated_at, sync_count)
+                VALUES (?, ?, ?, ?, ?, 1)
+                ON CONFLICT(word_id) DO UPDATE SET
+                    anki_note_id = ?,
+                    deck_name = ?,
+                    last_updated_at = ?,
+                    sync_count = sync_count + 1
+                """,
+                (
+                    word_id,
+                    anki_note_id,
+                    deck_name,
+                    timestamp,
+                    timestamp,
+                    anki_note_id,
+                    deck_name,
+                    timestamp,
+                ),
+            )
+            conn.commit()
+
     def mark_multiple_synced(self, words: List[str], anki_note_ids: Optional[List[int]] = None, deck_name: str = "Default"):
         """Mark multiple words as synced to Anki."""
         if anki_note_ids is None:
             anki_note_ids = [None] * len(words)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             timestamp = datetime.now().isoformat()
 
@@ -384,16 +538,24 @@ class WordDatabase:
 
     def delete_word(self, dutch: str) -> bool:
         """Delete a word from the database. Returns True if deleted, False if not found."""
-        with sqlite3.connect(self.db_path) as conn:
+        dutch = self._normalize_dutch(dutch)
+        with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM words WHERE dutch = ?", (dutch,))
             conn.commit()
             return cursor.rowcount > 0
 
+    def delete_word_by_id(self, word_id: int) -> bool:
+        """Delete a word from the database by ID. Returns True if deleted, False if not found."""
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM words WHERE id = ?", (word_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def search_words(self, query: str) -> List[Word]:
         """Search words by Dutch text, translation, or definition."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             search_pattern = f"%{query}%"
@@ -411,7 +573,7 @@ class WordDatabase:
 
     def get_stats(self) -> dict:
         """Get database statistics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             cursor.execute("SELECT COUNT(*) as total FROM words")
@@ -443,8 +605,8 @@ class WordDatabase:
 
     def get_sync_info(self, dutch: str) -> Optional[dict]:
         """Get Anki sync information for a word."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        dutch = self._normalize_dutch(dutch)
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             cursor.execute("""
@@ -457,13 +619,23 @@ class WordDatabase:
             row = cursor.fetchone()
             return dict(row) if row else None
 
+    def get_sync_info_by_id(self, word_id: int) -> Optional[dict]:
+        """Get Anki sync information for a word by ID."""
+        with self._connect() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT a.*
+                FROM anki_words a
+                WHERE a.word_id = ?
+            """, (word_id,))
+
             row = cursor.fetchone()
             return dict(row) if row else None
 
     def get_all_sync_info(self) -> List[dict]:
         """Get Anki sync information for all synced words."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        with self._connect() as conn:
             cursor = conn.cursor()
 
             cursor.execute("""
