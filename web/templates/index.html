@@ -94,6 +94,26 @@
         </div>
     </div>
 
+    {% if tags_all %}
+    <div class="tags-filter">
+        <div class="tags-title">Filter by tags:</div>
+        <div class="tags-pills">
+            {% for tag in tags_all %}
+            <button type="button"
+                    class="tag-pill {% if tag in selected_tags %}selected{% endif %}"
+                    onclick="toggleTag('{{ tag }}')">
+                {{ tag }}
+            </button>
+            {% endfor %}
+            {% if selected_tags %}
+            <button type="button" class="tag-pill clear" onclick="clearTags()">
+                Clear
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div id="quickAddFeedback" class="quick-add-feedback"></div>
 
     {% if words_data %}

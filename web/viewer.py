@@ -15,6 +15,7 @@ from word import Word
 from chatgpt import get_definitions
 from user_settings import UserConfig, set_user_config
 from word_service import WordService
+from word import TAGS_ALL
 
 # Load environment variables
 load_dotenv()
@@ -33,6 +34,14 @@ def build_pagination_url(page, query, sort_by, order):
     params = {'page': page, 'sort': sort_by, 'order': order}
     if query:
         params['q'] = query
+    # Preserve current tag filters if present
+    try:
+        tags_arg = request.args.get('tags', '').strip()
+        if tags_arg:
+            params['tags'] = tags_arg
+    except Exception:
+        # request might not be available in some contexts
+        pass
     return urlencode(params)
 
 # Make the function available in templates
@@ -98,6 +107,7 @@ def get_words_with_timestamps(query=None):
 
     return words_data
 
+
 @app.route('/')
 def index():
     """Main page showing all words or search results with pagination."""
@@ -108,6 +118,16 @@ def index():
     per_page = 100  # Words per page
 
     all_words = get_words_with_timestamps(query if query else None)
+
+    # Tag filtering (OR semantics: any selected tag matches)
+    raw_tags = request.args.get('tags', '').strip()
+    selected_tags = [t for t in raw_tags.split(',') if t]
+    if selected_tags:
+        selected_lower = {t.lower() for t in selected_tags}
+        def has_any_tag(word_obj):
+            word_tags = {str(t).lower() for t in (word_obj.tags or [])}
+            return not selected_lower.isdisjoint(word_tags)
+        all_words = [w for w in all_words if has_any_tag(w[0])]
 
     # Sort words
     # When searching, use search_priority as primary sort, user's choice as secondary
@@ -164,6 +184,8 @@ def index():
 
     stats = word_service.get_stats()
 
+    tags_all = TAGS_ALL
+
     return render_template(
         'index.html',
         words_data=words_data,
@@ -178,7 +200,9 @@ def index():
         showing_count=len(words_data),
         showing_start=start_idx + 1 if words_data else 0,
         showing_end=start_idx + len(words_data),
-        zip=zip
+        zip=zip,
+        tags_all=tags_all,
+        selected_tags=selected_tags
     )
 
 @app.route('/delete/<int:word_id>', methods=['POST'])

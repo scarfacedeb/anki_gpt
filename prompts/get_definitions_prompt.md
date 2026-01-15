@@ -34,6 +34,16 @@ ALWAYS RESPOND IN ENGLISH USING PROPER JSON FORMAT.
 - For the `definition_nl`, `definition_en`, `etymology`, and `grammar` fields, use simple HTML tags like `<b>` for emphasis on key terms and `<i>` for clarification or examples within the text.
 - Do not use block-level elements like `<p>` or `<div>`.
 
+### Tags (Hardcoded List)
+- Always include a `tags` array for each word.
+- Choose ONLY from this fixed set (lowercase):
+  - Grammatical: `noun`, `verb`, `adjective`, `adverb`, `pronoun`, `preposition`, `conjunction`, `interjection`, `article`, `numeral`
+  - Usage: `inburgeringexam`, `slang`
+- Pick exactly one primary grammatical tag when applicable (e.g., a base form is typically `noun`, `verb`, or `adjective`).
+- Add `inburgeringexam` only if the word is useful for the Dutch Inburgering A2 exam contexts.
+- Add `slang` only if the word is informal or colloquial.
+- Do NOT invent any other tags.
+
 ### Special Cases
 - **Phrases/Idioms:** If input is quoted, treat as single unit, omit grammar/pronunciation
 - **Multiple meanings:** Focus on 2-3 most common definitions
@@ -51,6 +61,7 @@ ALWAYS RESPOND IN ENGLISH USING PROPER JSON FORMAT.
     definition_en: "An exciting or unexpected event, often with an element of danger or discovery.",
     pronunciation: "/ˌaː.vɔnˈtyːr/",
     grammar: "Noun (het), root: avontuur. Parts: a- (prefix, intensifier) + avontuur (root).",
+    tags: ["noun"],
     examples_nl: ["Het was een groot avontuur om door de jungle te reizen.", "Ze gaan samen op avontuur in een nieuwe stad."],
     examples_en: ["It was a great adventure to travel through the jungle.", "They are going on an adventure together in a new city."],
     collocations: ["Op avontuur gaan (to go on an adventure)", "Een spannend avontuur (an exciting adventure)"],
@@ -70,6 +81,7 @@ ALWAYS RESPOND IN ENGLISH USING PROPER JSON FORMAT.
     definition_en: "To move on foot; to walk.",
     pronunciation: "/ˈloː.pə(n)/",
     grammar: "Verb (infinitive: lopen, present: loopt, past: liep, past participle: gelopen). Parts: lo- (root) + -pen (suffix, verb ending).",
+    tags: ["verb"],
     examples_nl: ["Ik loop elke ochtend naar mijn werk.", "We hebben gisteren in het park gelopen.", "Hij liep snel naar huis."],
     examples_en: ["I walk to work every morning.", "We walked in the park yesterday.", "He walked home quickly."],
     collocations: ["Een eind lopen (to walk a distance)", "Hard lopen (to run)"],

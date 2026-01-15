@@ -1,5 +1,14 @@
 from pydantic import BaseModel, Field
 
+# Centralized list of allowed tags used across the app (UI, prompts, validation)
+TAGS_ALL: list[str] = [
+    # Grammatical
+    "noun", "verb", "adjective", "adverb", "pronoun", "preposition",
+    "conjunction", "interjection", "article", "numeral",
+    # Usage
+    "inburgeringexam", "slang",
+]
+
 class Word(BaseModel):
     dutch: str = Field(validation_alias="Word or phrase to define in dutch")
     translation: str
@@ -39,6 +48,10 @@ class WordList(BaseModel):
     model_config = {
         "populate_by_name": True
     }
+
+class WordTags(BaseModel):
+    tags: list[str]
+
 
 def word_to_anki(word: Word) -> dict:
     """Convert a Word object to Anki fields dictionary."""

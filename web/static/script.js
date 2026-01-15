@@ -322,6 +322,38 @@ window.onclick = function(event) {
     }
 }
 
+// ===== Tag filtering helpers =====
+function getSelectedTagsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('tags');
+    if (!raw) return [];
+    return raw.split(',').map(t => t.trim()).filter(Boolean);
+}
+
+function toggleTag(tag) {
+    const params = new URLSearchParams(window.location.search);
+    const tags = new Set(getSelectedTagsFromUrl());
+    if (tags.has(tag)) {
+        tags.delete(tag);
+    } else {
+        tags.add(tag);
+    }
+    if (tags.size === 0) {
+        params.delete('tags');
+    } else {
+        params.set('tags', Array.from(tags).join(','));
+    }
+    params.delete('page'); // reset pagination when filters change
+    window.location.search = params.toString();
+}
+
+function clearTags() {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('tags');
+    params.delete('page');
+    window.location.search = params.toString();
+}
+
 let regenerationQueue = [];
 
 function updateQueueDisplay() {

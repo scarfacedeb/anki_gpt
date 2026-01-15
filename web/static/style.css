@@ -255,6 +255,64 @@ h1 {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Tag filter pills */
+.tags-filter {
+    background: var(--bg-secondary);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 8px 0 12px 0;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tags-title {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.tags-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag-pill {
+    padding: 6px 10px;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-radius: 9999px;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tag-pill:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-blue);
+}
+
+.tag-pill.selected {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+    box-shadow: var(--shadow-sm);
+}
+
+.tag-pill.clear {
+    background: transparent;
+    color: var(--text-secondary);
+    border-style: dashed;
+}
+
 /* Quick Add Styles */
 .quick-add-container {
     display: flex;
