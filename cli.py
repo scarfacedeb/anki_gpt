@@ -101,8 +101,23 @@ def cmd_regenerate():
             result = get_definitions(word.dutch, user_id=0)
             if result.words and len(result.words) > 0:
                 new_word = result.words[0]
-                _, synced = word_service.update(new_word)
-                return (True, word.dutch, new_word.level)
+                # If GPT returns a different Dutch word, delete the original
+                # before adding the new one to avoid duplicates.
+                try:
+                    old_norm = (word.dutch or "").strip().lower()
+                    new_norm = (new_word.dutch or "").strip().lower()
+                    if new_norm and new_norm != old_norm:
+                        # Delete original entry (and its Anki note if synced)
+                        word_service.delete(word.dutch)
+                        # Create the regenerated word as a new entry
+                        _, _ = word_service.create(new_word)
+                        return (True, new_word.dutch, new_word.level)
+                    else:
+                        # Same Dutch term: update in place
+                        _, _ = word_service.update(new_word)
+                        return (True, new_word.dutch, new_word.level)
+                except Exception as inner_e:
+                    return (False, word.dutch, f"Post-process error: {inner_e}")
             else:
                 return (False, word.dutch, "No data returned")
         except Exception as e:
