@@ -176,7 +176,6 @@ class WordService:
         Returns:
             Word object if found, None otherwise
         """
-        dutch = dutch.lower() # Normalize to lowercase
         word = self.db.get_word(dutch)
         if word:
             logger.debug(f"Retrieved word: {dutch}")
@@ -201,7 +200,6 @@ class WordService:
             If the word was synced to Anki and delete_from_anki is True,
             it will be removed from both the database and Anki.
         """
-        dutch = dutch.lower() # Normalize to lowercase
         # Get sync info before deleting from DB
         sync_info = self.db.get_sync_info(dutch)
         anki_note_id = sync_info.get('anki_note_id') if sync_info else None
@@ -318,6 +316,7 @@ class WordService:
         """
         return self.db.get_stats()
 
+
     def count(self) -> int:
         """
         Get total count of words.
@@ -340,7 +339,6 @@ class WordService:
         Note:
             Generally not needed as create/update handle this automatically.
         """
-        dutch = dutch.lower() # Normalize to lowercase
         self.db.mark_synced(dutch, anki_note_id)
         logger.info(f"Marked word as synced: {dutch}")
 

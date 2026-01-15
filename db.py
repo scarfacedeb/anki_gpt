@@ -400,7 +400,10 @@ class WordDatabase:
                 FROM anki_words a
                 INNER JOIN words w ON a.word_id = w.id
                 WHERE w.dutch = ?
-            """, (dutch.lower(),))
+            """, (dutch,))
+
+            row = cursor.fetchone()
+            return dict(row) if row else None
 
             row = cursor.fetchone()
             return dict(row) if row else None

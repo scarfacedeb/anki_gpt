@@ -35,7 +35,7 @@ def authorized(func):
 
 def generate_word(user_input: str, user_id: int) -> WordList:
     """Generate word definitions using ChatGPT without saving."""
-    response = get_definitions(user_input.lower(), user_id)
+    response = get_definitions(user_input, user_id)
     return response
 
 @authorized
@@ -111,7 +111,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @authorized
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_input = update.message.text.strip().lower()
+    user_input = update.message.text.strip()
     user_id = update.effective_user.id
 
     word_service = WordService()
