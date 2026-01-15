@@ -4,6 +4,29 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 from word import Word
+import bleach
+
+# Allowed inline tags for safe HTML storage
+_ALLOWED_INLINE_TAGS = [
+    "b", "i", "em", "strong", "u", "s", "sub", "sup", "code", "br",
+]
+
+
+def _sanitize_inline_html(text: str) -> str:
+    if text is None:
+        return ""
+    return bleach.clean(
+        text,
+        tags=_ALLOWED_INLINE_TAGS,
+        attributes={},
+        protocols=[],
+        strip=True,
+        strip_comments=True,
+    )
+
+
+def _sanitize_list_html(items: list[str]) -> list[str]:
+    return [_sanitize_inline_html(x) for x in (items or [])]
 
 class WordDatabase:
     def __init__(self, db_path: str = "words.db"):
@@ -155,22 +178,42 @@ class WordDatabase:
             cursor.execute("ALTER TABLE words ADD COLUMN score INTEGER DEFAULT 1")
             conn.commit()
 
+    def _normalize_dutch(self, dutch: str) -> str:
+        """Normalize dutch text: trim whitespace and lowercase for consistent storage/lookup."""
+        return dutch.strip().lower()
+
     def _word_to_dict(self, word: Word) -> dict:
         """Convert Word object to dictionary for database storage."""
+        # Sanitize fields to preserve only valid inline HTML and repair tags
+        dutch = _sanitize_inline_html(word.dutch)
+        translation = _sanitize_inline_html(word.translation)
+        definition_nl = _sanitize_inline_html(word.definition_nl)
+        definition_en = _sanitize_inline_html(word.definition_en)
+        pronunciation = _sanitize_inline_html(word.pronunciation)
+        grammar = _sanitize_inline_html(word.grammar)
+        etymology = _sanitize_inline_html(word.etymology)
+
+        collocations = _sanitize_list_html(word.collocations)
+        synonyms = _sanitize_list_html(word.synonyms)
+        examples_nl = _sanitize_list_html(word.examples_nl)
+        examples_en = _sanitize_list_html(word.examples_en)
+        related = _sanitize_list_html(word.related)
+        tags = _sanitize_list_html(word.tags)
+
         return {
-            'dutch': word.dutch,
-            'translation': word.translation,
-            'definition_nl': word.definition_nl,
-            'definition_en': word.definition_en,
-            'pronunciation': word.pronunciation,
-            'grammar': word.grammar,
-            'collocations': json.dumps(word.collocations),
-            'synonyms': json.dumps(word.synonyms),
-            'examples_nl': json.dumps(word.examples_nl),
-            'examples_en': json.dumps(word.examples_en),
-            'etymology': word.etymology,
-            'related': json.dumps(word.related),
-            'tags': json.dumps(word.tags),
+            'dutch': self._normalize_dutch(dutch),
+            'translation': translation,
+            'definition_nl': definition_nl,
+            'definition_en': definition_en,
+            'pronunciation': pronunciation,
+            'grammar': grammar,
+            'collocations': json.dumps(collocations),
+            'synonyms': json.dumps(synonyms),
+            'examples_nl': json.dumps(examples_nl),
+            'examples_en': json.dumps(examples_en),
+            'etymology': etymology,
+            'related': json.dumps(related),
+            'tags': json.dumps(tags),
             'level': word.level,
             'score': word.score
         }
@@ -196,29 +239,38 @@ class WordDatabase:
         )
 
     def save_word(self, word: Word) -> int:
-        """Save a word to the database. Returns the row ID."""
-        word_dict = self._word_to_dict(word)
+        """Save a word to the database. Returns the row ID.
 
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        Uses normalized matching (trim + lowercase) to avoid duplicates differing only by case/spacing.
+        """
+        word_dict = self._word_to_dict(word)
+        normalized = self._normalize_dutch(word.dutch)
             cursor = conn.cursor()
 
-            # Check if word already exists
-            cursor.execute("SELECT id FROM words WHERE dutch = ?", (word.dutch,))
+            # Check if a logically equivalent word already exists (case/space-insensitive)
+            cursor.execute(
+                (
+                    "SELECT id, dutch FROM words "
+                    "WHERE LOWER(TRIM(dutch)) = LOWER(TRIM(?)) "
+                    "ORDER BY CASE WHEN dutch = ? THEN 0 ELSE 1 END "
+                    "LIMIT 1"
+                ),
+                (normalized, word.dutch,)
+            )
             existing = cursor.fetchone()
 
             if existing:
-                # Update existing word
+                # Update the existing row by id to avoid multi-row updates
                 word_dict['updated_at'] = datetime.now().isoformat()
                 placeholders = ', '.join([f"{key} = ?" for key in word_dict.keys()])
-                values = list(word_dict.values()) + [word.dutch] # original word.dutch value for WHERE clause
+                values = list(word_dict.values()) + [existing['id']]
 
                 cursor.execute(f"""
-                    UPDATE words SET {placeholders} WHERE dutch = ?
+                    UPDATE words SET {placeholders} WHERE id = ?
                 """, values)
                 return existing['id']
             else:
-                # Insert new word
+                # Insert as new row (already normalized in word_dict)
                 placeholders = ', '.join(['?' for _ in word_dict])
                 columns = ', '.join(word_dict.keys())
 
