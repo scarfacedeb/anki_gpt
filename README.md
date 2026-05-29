@@ -87,8 +87,8 @@ Send Dutch words or phrases to the bot, and it will:
 ### User Settings (Web Interface)
 
 Access settings at `/settings`:
-- **Model**: Choose from gpt-5-nano, gpt-5-mini, gpt-5, gpt-5.2, gpt-4o, gpt-4o-mini
-- **Effort Level**: minimal, low, medium, high (reasoning effort)
+- **Model**: Choose from gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.4-nano
+- **Effort Level**: none, low, medium, high, xhigh (reasoning effort)
 - **Verbosity**: low, medium, high (detail level in definitions)
 
 Settings are persisted per user and apply to all word generation in the web interface.

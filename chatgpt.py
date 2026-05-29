@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 # Get API key from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano")
-OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "low")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.5")
+OPENAI_MODEL_EFFORT = os.getenv("OPENAI_MODEL_EFFORT", "medium")
 
 def load_prompt(filename: str) -> str:
     return open(Path(__file__).parent / "prompts" / filename, 'r').read()

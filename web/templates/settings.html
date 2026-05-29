@@ -193,12 +193,10 @@
                 </div>
                 <div class="setting-control">
                     <select id="modelSelect" onchange="updateSetting('model', this.value)">
-                        <option value="gpt-5-nano" {% if config.model == 'gpt-5-nano' %}selected{% endif %}>GPT-5 Nano (Fast)</option>
-                        <option value="gpt-5-mini" {% if config.model == 'gpt-5-mini' %}selected{% endif %}>GPT-5 Mini (Balanced)</option>
-                        <option value="gpt-5" {% if config.model == 'gpt-5' %}selected{% endif %}>GPT-5</option>
-                        <option value="gpt-5.2" {% if config.model == 'gpt-5.2' %}selected{% endif %}>GPT-5.2 (Best)</option>
-                        <option value="gpt-4o" {% if config.model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
-                        <option value="gpt-4o-mini" {% if config.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini</option>
+                        <option value="gpt-5.5" {% if config.model == 'gpt-5.5' %}selected{% endif %}>GPT-5.5</option>
+                        <option value="gpt-5.4" {% if config.model == 'gpt-5.4' %}selected{% endif %}>GPT-5.4</option>
+                        <option value="gpt-5.4-mini" {% if config.model == 'gpt-5.4-mini' %}selected{% endif %}>GPT-5.4 Mini</option>
+                        <option value="gpt-5.4-nano" {% if config.model == 'gpt-5.4-nano' %}selected{% endif %}>GPT-5.4 Nano</option>
                     </select>
                 </div>
             </div>
@@ -210,10 +208,11 @@
                 </div>
                 <div class="setting-control">
                     <select id="effortSelect" onchange="updateSetting('effort', this.value)">
-                        <option value="minimal" {% if config.effort == 'minimal' %}selected{% endif %}>Minimal</option>
+                        <option value="none" {% if config.effort == 'none' %}selected{% endif %}>None</option>
                         <option value="low" {% if config.effort == 'low' %}selected{% endif %}>Low</option>
                         <option value="medium" {% if config.effort == 'medium' %}selected{% endif %}>Medium</option>
                         <option value="high" {% if config.effort == 'high' %}selected{% endif %}>High</option>
+                        <option value="xhigh" {% if config.effort == 'xhigh' %}selected{% endif %}>Extra High</option>
                     </select>
                 </div>
             </div>

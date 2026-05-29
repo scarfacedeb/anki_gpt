@@ -245,7 +245,7 @@ def quick_add_word():
         if word_service.exists(dutch):
             return jsonify({'success': False, 'error': f'Word "{dutch}" already exists in database'}), 400
 
-        # Generate word data using ChatGPT (uses gpt-5-mini with medium effort)
+        # Generate word data using ChatGPT with the configured model and effort.
         result = get_definitions(dutch, user_id=WEB_USER_ID)
 
         if not result.words or len(result.words) == 0:
@@ -478,14 +478,14 @@ def update_word(word_id):
 
 @app.route('/regenerate/<int:word_id>', methods=['POST'])
 def regenerate_word(word_id):
-    """Regenerate a word using ChatGPT with gpt-5-mini and medium effort."""
+    """Regenerate a word using ChatGPT with the configured model and effort."""
     try:
         # Get the current word
         current_word = word_service.get_by_id(word_id)
         if not current_word:
             return jsonify({'success': False, 'error': 'Word not found'}), 404
 
-        # Regenerate using ChatGPT (uses gpt-5-mini with medium effort)
+        # Regenerate using ChatGPT with the configured model and effort.
         result = get_definitions(current_word.dutch, user_id=WEB_USER_ID)
 
         if not result.words or len(result.words) == 0:

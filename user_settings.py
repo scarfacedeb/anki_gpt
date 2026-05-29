@@ -6,34 +6,32 @@ from dataclasses import dataclass
 SETTINGS_FILE = "user_settings.json"
 
 ALLOWED_MODELS = [
-    "gpt-5-nano",
-    "gpt-5-mini",
-    "gpt-5",
-    "gpt-5.2",
-    "gpt-4o",
-    "gpt-4o-mini"
+    "gpt-5.5",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano"
 ]
 
-ALLOWED_EFFORTS = ["minimal", "low", "medium", "high"]
+ALLOWED_EFFORTS = ["none", "low", "medium", "high", "xhigh"]
 
 ALLOWED_VERBOSITIES = ["low", "medium", "high"]
 
 @dataclass
 class UserConfig:
-    model: str = "gpt-5-nano"
-    effort: str = "minimal"
+    model: str = "gpt-5.5"
+    effort: str = "medium"
     verbosity: str = "medium"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'UserConfig':
-        model = data.get("model", "gpt-5-nano")
-        effort = data.get("effort", "minimal")
+        model = data.get("model", "gpt-5.5")
+        effort = data.get("effort", "medium")
         verbosity = data.get("verbosity", "medium")
 
         if model not in ALLOWED_MODELS:
-            model = "gpt-5-nano"
+            model = "gpt-5.5"
         if effort not in ALLOWED_EFFORTS:
-            effort = "minimal"
+            effort = "medium"
         if verbosity not in ALLOWED_VERBOSITIES:
             verbosity = "medium"
 
