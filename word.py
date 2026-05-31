@@ -18,10 +18,10 @@ class Word(BaseModel):
         description="English translation of the Dutch headword. Use English only; do not write Dutch prose here.",
     )
     definition_nl: str = Field(
-        description="Concise definition written in Dutch. This is the only definition field that should use Dutch.",
+        description="Concise definition written in Dutch. Define the meaning directly; do not start by repeating the headword or using '<word> betekent...'.",
     )
     definition_en: str = Field(
-        description="Concise definition written in English for an English-speaking learner. Use English only.",
+        description="Concise definition written in English for an English-speaking learner. Define the meaning directly; do not start by repeating the headword or using '<word> means...'.",
     )
     pronunciation: str = Field(
         description="IPA pronunciation in forward slashes, for example /ˈloː.pə(n)/.",

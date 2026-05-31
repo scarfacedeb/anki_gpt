@@ -45,6 +45,8 @@ ALWAYS RESPOND USING THE REQUESTED STRUCTURED FORMAT.
 
 ### Quality Standards
 - **Definitions:** Clear, concise, and pedagogically useful (2-3 sentences). `definition_nl` is Dutch; `definition_en` is English.
+- **Avoid headword repetition:** Do not start definitions by repeating the headword (avoid patterns like "`<word>` means..." or "`<word>` betekent..."). Define the concept directly: "To notify someone..." / "Laten weten..." instead of naming the word again.
+- **Concise wording:** Do not repeat the same meaning across `translation`, `definition_nl`, and `definition_en`. `translation` should be a short gloss; definitions should add usage boundaries or nuance.
 - **Examples:** Show the word in different grammatical contexts (3 examples showing tenses, cases, etc.). `examples_nl` is Dutch; `examples_en` is English.
 - **Synonyms:** Only truly interchangeable Dutch words (3-5 actual synonyms), each with an English gloss in parentheses.
 - **Collocations:** Common Dutch word combinations with English translations in parentheses (3-5).
@@ -80,7 +82,7 @@ ALWAYS RESPOND USING THE REQUESTED STRUCTURED FORMAT.
     dutch: "Avontuur",
     translation: "adventure",
     definition_nl: "Een spannende of onverwachte gebeurtenis, vaak met een element van gevaar of ontdekking.",
-    definition_en: "An exciting or unexpected event, often with an element of danger or discovery.",
+    definition_en: "An exciting or unexpected event, often involving danger, discovery, or uncertainty.",
     pronunciation: "/ˌaː.vɔnˈtyːr/",
     grammar: "Noun (het), plural: avonturen, diminutive: avontuurtje. Parts: a- (prefix, intensifier) + avontuur (root).",
     tags: ["noun"],
