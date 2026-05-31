@@ -241,6 +241,23 @@ class WordService:
             logger.debug(f"Word not found by ID: {word_id}")
         return word
 
+    def get_id(self, dutch: str) -> Optional[int]:
+        """
+        Get a word's database ID by its Dutch text.
+
+        Args:
+            dutch: The Dutch word to look up
+
+        Returns:
+            Database row ID if found, None otherwise
+        """
+        word_id = self.db.get_word_id(dutch)
+        if word_id:
+            logger.debug(f"Retrieved word ID for {dutch}: {word_id}")
+        else:
+            logger.debug(f"Word ID not found: {dutch}")
+        return word_id
+
     def delete(self, dutch: str, delete_from_anki: bool = True) -> tuple[bool, bool]:
         """
         Delete a word from the database and optionally from Anki.

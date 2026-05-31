@@ -42,16 +42,17 @@ def _inject_tags_into_prompt(base: str) -> str:
     return base + guidance
 
 
-def get_definitions(input_text: str, user_id: int) -> WordList:
+def get_definitions(input_text: str, user_id: int, effort_override: str | None = None) -> WordList:
     logger.info(f"Input: {input_text}")
 
     config = get_user_config(user_id)
+    effort = effort_override or config.effort
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     prompt = _inject_tags_into_prompt(GET_DEFINITIONS_PROMPT_BASE)
     response = client.responses.parse(
         model=config.model,
-        reasoning={ 'effort': config.effort },
+        reasoning={ 'effort': effort },
         text_format=WordList,
         instructions=prompt,
         input=input_text,
