@@ -51,3 +51,5 @@ htmlcov/
 
 # uv
 .python-version
+
+words.db
