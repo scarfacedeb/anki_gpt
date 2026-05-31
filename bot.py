@@ -22,11 +22,19 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+DELETE_WORD_CALLBACK_PREFIX = "delete_word:"
+
 def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
         user_id = update.effective_user.id
         if user_id not in ALLOWED_USER_IDS:
-            await update.message.reply_text(f"You are not authorized to use this bot (ID: {user_id}).")
+            if update.callback_query:
+                await update.callback_query.answer(
+                    f"You are not authorized to use this bot (ID: {user_id}).",
+                    show_alert=True,
+                )
+            elif update.message:
+                await update.message.reply_text(f"You are not authorized to use this bot (ID: {user_id}).")
             return
 
         await func(update, context, *args, **kwargs)
@@ -37,6 +45,23 @@ def generate_word(user_input: str, user_id: int) -> WordList:
     """Generate word definitions using ChatGPT without saving."""
     response = get_definitions(user_input, user_id)
     return response
+
+def delete_word_keyboard(word_id: int | None) -> InlineKeyboardMarkup | None:
+    """Build an inline delete button for a saved word."""
+    if word_id is None:
+        return None
+
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Delete word", callback_data=f"{DELETE_WORD_CALLBACK_PREFIX}{word_id}")]
+    ])
+
+async def reply_word(update: Update, prefix: str, word: Word, word_id: int | None):
+    """Reply with a word definition and its Telegram actions."""
+    response_text = word_to_html(word)
+    await update.message.reply_html(
+        f"{prefix}\n\n{response_text}",
+        reply_markup=delete_word_keyboard(word_id),
+    )
 
 @authorized
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,6 +134,31 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.edit_message_text(f"❌ Failed to set effort level")
 
+    elif data.startswith(DELETE_WORD_CALLBACK_PREFIX):
+        word_id_text = data.removeprefix(DELETE_WORD_CALLBACK_PREFIX)
+        try:
+            word_id = int(word_id_text)
+        except ValueError:
+            await query.edit_message_text("❌ Could not delete word: invalid word ID.")
+            return
+
+        word_service = WordService()
+        word = await asyncio.to_thread(word_service.get_by_id, word_id)
+        if not word:
+            await query.edit_message_text("Word was already deleted.")
+            return
+
+        db_deleted, anki_deleted = await asyncio.to_thread(word_service.delete_by_id, word_id)
+        if db_deleted:
+            anki_text = ""
+            if anki_deleted is True:
+                anki_text = " Anki note deleted too."
+            elif anki_deleted is False:
+                anki_text = " Anki note could not be deleted."
+            await query.edit_message_text(f"Deleted word: {word.dutch}.{anki_text}")
+        else:
+            await query.edit_message_text(f"❌ Failed to delete word: {word.dutch}")
+
 @authorized
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
@@ -121,8 +171,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if existing_word:
         # Word found in database - show it without GPT call
-        response_text = word_to_html(existing_word)
-        await update.message.reply_html(f"📖 Found in database:\n\n{response_text}")
+        word_id = await asyncio.to_thread(word_service.get_id, user_input)
+        await reply_word(update, "📖 Found in database:", existing_word, word_id)
         return
 
     # Word not found - generate with GPT
@@ -138,8 +188,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Save new words
     for new_word in response.words:
         await asyncio.to_thread(word_service.create, new_word)
-        response_text = word_to_html(new_word)
-        await update.message.reply_html(f"✅ Added:\n\n{response_text}")
+        word_id = await asyncio.to_thread(word_service.get_id, new_word.dutch)
+        await reply_word(update, "✅ Added:", new_word, word_id)
 
     # Sync with AnkiWeb after processing all words
     await asyncio.to_thread(sync_anki)

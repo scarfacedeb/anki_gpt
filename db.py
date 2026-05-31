@@ -422,6 +422,17 @@ class WordDatabase:
                 return self._dict_to_word(dict(row))
             return None
 
+    def get_word_id(self, dutch: str) -> Optional[int]:
+        """Get a word's database ID by its Dutch text."""
+        dutch = self._normalize_dutch(dutch)
+        with self._connect() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT id FROM words WHERE dutch = ?", (dutch,))
+            row = cursor.fetchone()
+
+            return row["id"] if row else None
+
     def get_all_words(self) -> List[Word]:
         """Get all words from the database."""
         with self._connect() as conn:
