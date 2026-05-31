@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 
 DELETE_WORD_CALLBACK_PREFIX = "delete_word:"
+REGENERATE_WORD_CALLBACK_PREFIX = "regenerate_word:"
 
 def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -41,18 +42,30 @@ def authorized(func):
     return wrapper
 
 
-def generate_word(user_input: str, user_id: int) -> WordList:
+def generate_word(user_input: str, user_id: int, effort_override: str | None = None) -> WordList:
     """Generate word definitions using ChatGPT without saving."""
-    response = get_definitions(user_input, user_id)
+    response = get_definitions(user_input, user_id, effort_override=effort_override)
     return response
 
-def delete_word_keyboard(word_id: int | None) -> InlineKeyboardMarkup | None:
-    """Build an inline delete button for a saved word."""
+def higher_effort(effort: str) -> str:
+    """Return the next higher reasoning effort, capped at the maximum."""
+    try:
+        effort_index = ALLOWED_EFFORTS.index(effort)
+    except ValueError:
+        effort_index = ALLOWED_EFFORTS.index("medium")
+
+    return ALLOWED_EFFORTS[min(effort_index + 1, len(ALLOWED_EFFORTS) - 1)]
+
+def word_actions_keyboard(word_id: int | None) -> InlineKeyboardMarkup | None:
+    """Build inline actions for a saved word."""
     if word_id is None:
         return None
 
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Delete word", callback_data=f"{DELETE_WORD_CALLBACK_PREFIX}{word_id}")]
+        [
+            InlineKeyboardButton("Regenerate higher", callback_data=f"{REGENERATE_WORD_CALLBACK_PREFIX}{word_id}"),
+            InlineKeyboardButton("Delete word", callback_data=f"{DELETE_WORD_CALLBACK_PREFIX}{word_id}"),
+        ]
     ])
 
 async def reply_word(update: Update, prefix: str, word: Word, word_id: int | None):
@@ -60,7 +73,7 @@ async def reply_word(update: Update, prefix: str, word: Word, word_id: int | Non
     response_text = word_to_html(word)
     await update.message.reply_html(
         f"{prefix}\n\n{response_text}",
-        reply_markup=delete_word_keyboard(word_id),
+        reply_markup=word_actions_keyboard(word_id),
     )
 
 @authorized
@@ -158,6 +171,39 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"Deleted word: {word.dutch}.{anki_text}")
         else:
             await query.edit_message_text(f"❌ Failed to delete word: {word.dutch}")
+
+    elif data.startswith(REGENERATE_WORD_CALLBACK_PREFIX):
+        word_id_text = data.removeprefix(REGENERATE_WORD_CALLBACK_PREFIX)
+        try:
+            word_id = int(word_id_text)
+        except ValueError:
+            await query.edit_message_text("❌ Could not regenerate word: invalid word ID.")
+            return
+
+        word_service = WordService()
+        existing_word = await asyncio.to_thread(word_service.get_by_id, word_id)
+        if not existing_word:
+            await query.edit_message_text("Word was already deleted.")
+            return
+
+        effort = higher_effort(get_user_config(user_id).effort)
+        await query.edit_message_text(f"Regenerating {existing_word.dutch} with {effort} reasoning...")
+
+        response = await asyncio.to_thread(generate_word, existing_word.dutch, user_id, effort)
+        if not response.words:
+            await query.edit_message_text(f"❌ Could not regenerate word: {existing_word.dutch}")
+            return
+
+        regenerated_word = response.words[0]
+        await asyncio.to_thread(word_service.update_by_id, word_id, regenerated_word)
+        await asyncio.to_thread(sync_anki)
+
+        response_text = word_to_html(regenerated_word)
+        await query.edit_message_text(
+            f"✅ Regenerated with {effort} reasoning:\n\n{response_text}",
+            parse_mode="HTML",
+            reply_markup=word_actions_keyboard(word_id),
+        )
 
 @authorized
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
