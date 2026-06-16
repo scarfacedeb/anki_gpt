@@ -72,6 +72,45 @@ async function deleteWord(wordId, cardElement) {
 
 const pendingAdditions = new Map();
 
+async function waitForJob(jobId, { intervalMs = 1000, timeoutMs = 120000 } = {}) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        const response = await fetch(`/api/jobs/${jobId}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Job status request failed');
+        }
+
+        if (data.status === 'done') {
+            return data.result;
+        }
+
+        if (data.status === 'error') {
+            throw new Error(data.error || 'Background job failed');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+
+    throw new Error('Timed out waiting for background job');
+}
+
+async function startJob(response) {
+    const data = await response.json();
+
+    if (!response.ok && !data.success) {
+        return data;
+    }
+
+    if (data.job_id) {
+        return await waitForJob(data.job_id);
+    }
+
+    return data;
+}
+
 async function quickAddWord() {
     const input = document.getElementById('quickAddInput');
     const dutch = input.value.trim();
@@ -99,7 +138,7 @@ async function quickAddWord() {
             body: JSON.stringify({ dutch })
         });
 
-        const data = await response.json();
+        const data = await startJob(response);
 
         if (data.success) {
             pendingAdditions.set(dutch, 'success');
@@ -211,7 +250,7 @@ async function regenerateWord(wordId, cardElement) {
             }
         });
 
-        const data = await response.json();
+        const data = await startJob(response);
 
         if (data.success) {
             currentRegeneratedData = data.new;
@@ -413,7 +452,7 @@ async function regenerateWordInline(wordId, buttonElement) {
             }
         });
 
-        const data = await response.json();
+        const data = await startJob(response);
 
         if (data.success) {
             regenerationQueue.push({

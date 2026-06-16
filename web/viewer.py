@@ -4,6 +4,8 @@ Simple HTML viewer for browsing the local word database.
 import sys
 import logging
 import os
+import threading
+import uuid
 from pathlib import Path
 
 # Add parent directory to path to import from main package
@@ -29,6 +31,39 @@ word_service = WordService()
 
 # Web interface user ID
 WEB_USER_ID = 0
+
+jobs_lock = threading.Lock()
+jobs = {}
+
+
+def start_background_job(target, *args):
+    """Start a background job and return its ID."""
+    job_id = uuid.uuid4().hex
+    with jobs_lock:
+        jobs[job_id] = {
+            'status': 'pending',
+            'result': None,
+            'error': None
+        }
+
+    def run_job():
+        with jobs_lock:
+            jobs[job_id]['status'] = 'running'
+
+        try:
+            result = target(*args)
+            with jobs_lock:
+                jobs[job_id]['status'] = 'done'
+                jobs[job_id]['result'] = result
+        except Exception as e:
+            logger.error(f"Background job {job_id} failed: {e}", exc_info=True)
+            with jobs_lock:
+                jobs[job_id]['status'] = 'error'
+                jobs[job_id]['error'] = str(e)
+
+    thread = threading.Thread(target=run_job, daemon=True)
+    thread.start()
+    return job_id
 
 def build_pagination_url(page, query, sort_by, order):
     """Build URL query string for pagination."""
@@ -233,7 +268,7 @@ def delete_word(word_id):
 
 @app.route('/quick-add', methods=['POST'])
 def quick_add_word():
-    """Quick add a new word using ChatGPT."""
+    """Start a quick-add job for a new word."""
     try:
         data = request.json
         dutch = data.get('dutch', '').strip()
@@ -245,30 +280,61 @@ def quick_add_word():
         if word_service.exists(dutch):
             return jsonify({'success': False, 'error': f'Word "{dutch}" already exists in database'}), 400
 
-        # Generate word data using ChatGPT with the configured model and effort.
-        result = get_definitions(dutch, user_id=WEB_USER_ID)
-
-        if not result.words or len(result.words) == 0:
-            return jsonify({'success': False, 'error': 'Failed to generate word data'}), 500
-
-        # Save the first word (usually there's only one)
-        word = result.words[0]
-        _, synced = word_service.create(word)
-        logger.info(f"Quick added word: {word.dutch} (synced: {synced})")
-
+        job_id = start_background_job(run_quick_add_job, dutch)
         return jsonify({
             'success': True,
-            'word': word.dutch,
-            'word_data': {
-                'dutch': word.dutch,
-                'translation': word.translation,
-                'grammar': word.grammar,
-                'pronunciation': word.pronunciation
-            }
-        })
+            'job_id': job_id
+        }), 202
     except Exception as e:
         logger.error(f"Error in quick add: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def run_quick_add_job(dutch):
+    """Generate and save a word in a background thread."""
+    # Re-check inside the job so duplicate queued requests do not race.
+    if word_service.exists(dutch):
+        return {
+            'success': False,
+            'error': f'Word "{dutch}" already exists in database'
+        }
+
+    result = get_definitions(dutch, user_id=WEB_USER_ID)
+
+    if not result.words or len(result.words) == 0:
+        return {'success': False, 'error': 'Failed to generate word data'}
+
+    # Save the first word (usually there's only one)
+    word = result.words[0]
+    _, synced = word_service.create(word)
+    logger.info(f"Quick added word: {word.dutch} (synced: {synced})")
+
+    return {
+        'success': True,
+        'word': word.dutch,
+        'word_data': {
+            'dutch': word.dutch,
+            'translation': word.translation,
+            'grammar': word.grammar,
+            'pronunciation': word.pronunciation
+        }
+    }
+
+
+@app.route('/api/jobs/<job_id>', methods=['GET'])
+def job_status_api(job_id):
+    """Get background job status."""
+    with jobs_lock:
+        job = jobs.get(job_id)
+        if not job:
+            return jsonify({'success': False, 'error': 'Job not found'}), 404
+
+        return jsonify({
+            'success': True,
+            'status': job['status'],
+            'result': job['result'],
+            'error': job['error']
+        })
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats_api():
@@ -309,8 +375,6 @@ def settings_api():
     except Exception as e:
         logger.error(f"Error updating settings: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
-
-import threading
 
 # Global sync status with thread locks
 sync_to_anki_lock = threading.Lock()
@@ -478,30 +542,42 @@ def update_word(word_id):
 
 @app.route('/regenerate/<int:word_id>', methods=['POST'])
 def regenerate_word(word_id):
-    """Regenerate a word using ChatGPT with the configured model and effort."""
+    """Start a background regeneration job."""
     try:
         # Get the current word
         current_word = word_service.get_by_id(word_id)
         if not current_word:
             return jsonify({'success': False, 'error': 'Word not found'}), 404
 
-        # Regenerate using ChatGPT with the configured model and effort.
-        result = get_definitions(current_word.dutch, user_id=WEB_USER_ID)
-
-        if not result.words or len(result.words) == 0:
-            return jsonify({'success': False, 'error': 'Failed to regenerate word'}), 500
-
-        new_word = result.words[0]
-
-        # Return both old and new word data
+        job_id = start_background_job(run_regenerate_job, word_id)
         return jsonify({
             'success': True,
-            'current': current_word.model_dump(),
-            'new': new_word.model_dump()
-        })
+            'job_id': job_id
+        }), 202
     except Exception as e:
         logger.error(f"Error regenerating word: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def run_regenerate_job(word_id):
+    """Regenerate a word in a background thread."""
+    current_word = word_service.get_by_id(word_id)
+    if not current_word:
+        return {'success': False, 'error': 'Word not found'}
+
+    # Regenerate using ChatGPT with the configured model and effort.
+    result = get_definitions(current_word.dutch, user_id=WEB_USER_ID)
+
+    if not result.words or len(result.words) == 0:
+        return {'success': False, 'error': 'Failed to regenerate word'}
+
+    new_word = result.words[0]
+
+    return {
+        'success': True,
+        'current': current_word.model_dump(),
+        'new': new_word.model_dump()
+    }
 
 @app.route('/confirm-regenerate/<int:word_id>', methods=['POST'])
 def confirm_regenerate(word_id):
