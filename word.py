@@ -101,24 +101,34 @@ def word_to_anki(word: Word) -> dict:
 
 def word_to_html(word: Word) -> str:
     examples = list(zip(word.examples_nl, word.examples_en))
-    examples_html = "".join(
-        f"{nl} ({en})" for nl, en in examples
+    examples_html = "\n".join(
+        f"• {nl}\n  <i>{en}</i>" for nl, en in examples
     )
 
-    lines = [
-        f"<b>{word.dutch}</b>\n",
-        f"<b>Translation:</b> {word.translation}",
-        f"<b>Etymology:</b> {word.etymology}",
-        f"<b>Grammar:</b> {word.grammar}",
-        f"<b>Pronunciation:</b> {word.pronunciation}",
-        f"<b>Collocations:</b> {', '.join(word.collocations)}",
-        f"<b>Synonyms:</b> {', '.join(word.synonyms)}",
-        f"<b>Related:</b> {', '.join(word.related)}",
-        f"<b>Tags:</b> {', '.join(word.tags)}",
-        f"<b>Score:</b> {word.score}",
-        f"<b>Definition:</b> {word.definition_nl} ",
-        f"<b>Definition EN:</b> {word.definition_en} ",
-        f"<b>Examples:</b><i>{examples_html}</i>"
+    sections = [
+        f"<b>{word.dutch}</b>",
+        f"<b>Translation</b>\n<blockquote>{word.translation}</blockquote>",
+        f"<b>Grammar</b>\n<blockquote>{word.grammar}</blockquote>",
+        f"<b>Etymology</b>\n<blockquote>{word.etymology}</blockquote>",
+        f"<b>Pronunciation</b>\n{word.pronunciation}",
+        f"<b>Definitions</b>\nNL: {word.definition_nl}\nEN: {word.definition_en}",
     ]
 
-    return "\n".join(lines)
+    if word.collocations:
+        sections.append(f"<b>Collocations</b>\n{', '.join(word.collocations)}")
+
+    if word.synonyms:
+        sections.append(f"<b>Synonyms</b>\n{', '.join(word.synonyms)}")
+
+    if word.related:
+        sections.append(f"<b>Related</b>\n{', '.join(word.related)}")
+
+    if word.tags:
+        sections.append(f"<b>Tags</b>\n{', '.join(word.tags)}")
+
+    sections.append(f"<b>Score</b>\n{word.score}")
+
+    if examples_html:
+        sections.append(f"<b>Examples</b>\n{examples_html}")
+
+    return "\n\n".join(sections)
