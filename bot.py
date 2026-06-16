@@ -24,6 +24,7 @@ logging.basicConfig(
 
 DELETE_WORD_CALLBACK_PREFIX = "delete_word:"
 REGENERATE_WORD_CALLBACK_PREFIX = "regenerate_word:"
+SHOW_MORE_CALLBACK_PREFIX = "show_more:"
 
 def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -56,17 +57,25 @@ def higher_effort(effort: str) -> str:
 
     return ALLOWED_EFFORTS[min(effort_index + 1, len(ALLOWED_EFFORTS) - 1)]
 
-def word_actions_keyboard(word_id: int | None) -> InlineKeyboardMarkup | None:
+def word_actions_keyboard(word_id: int | None, include_show_more: bool = True) -> InlineKeyboardMarkup | None:
     """Build inline actions for a saved word."""
     if word_id is None:
         return None
 
-    return InlineKeyboardMarkup([
+    rows = []
+    if include_show_more:
+        rows.append([
+            InlineKeyboardButton("Show more", callback_data=f"{SHOW_MORE_CALLBACK_PREFIX}{word_id}"),
+        ])
+
+    rows.append(
         [
             InlineKeyboardButton("Regenerate higher", callback_data=f"{REGENERATE_WORD_CALLBACK_PREFIX}{word_id}"),
             InlineKeyboardButton("Delete word", callback_data=f"{DELETE_WORD_CALLBACK_PREFIX}{word_id}"),
         ]
-    ])
+    )
+
+    return InlineKeyboardMarkup(rows)
 
 async def reply_word(update: Update, prefix: str, word: Word, word_id: int | None):
     """Reply with a word definition and its Telegram actions."""
@@ -80,6 +89,12 @@ async def reply_word_message(message, prefix: str, word: Word, word_id: int | No
         f"{prefix}\n\n{response_text}",
         reply_markup=word_actions_keyboard(word_id),
     )
+
+
+def get_message_prefix(message) -> str:
+    """Extract the leading status line from a word response message."""
+    text = getattr(message, "text_html", None) or getattr(message, "text", "") or ""
+    return text.split("\n\n", 1)[0] if text else "Details:"
 
 @authorized
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -151,6 +166,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"✅ Reasoning effort set to: {effort}")
         else:
             await query.edit_message_text(f"❌ Failed to set effort level")
+
+    elif data.startswith(SHOW_MORE_CALLBACK_PREFIX):
+        word_id_text = data.removeprefix(SHOW_MORE_CALLBACK_PREFIX)
+        try:
+            word_id = int(word_id_text)
+        except ValueError:
+            await query.edit_message_text("❌ Could not show more: invalid word ID.")
+            return
+
+        word_service = WordService()
+        word = await asyncio.to_thread(word_service.get_by_id, word_id)
+        if not word:
+            await query.edit_message_text("Word was already deleted.")
+            return
+
+        prefix = get_message_prefix(query.message)
+        await query.edit_message_text(
+            f"{prefix}\n\n{word_to_html(word, include_extra=True)}",
+            parse_mode="HTML",
+            reply_markup=word_actions_keyboard(word_id, include_show_more=False),
+        )
 
     elif data.startswith(DELETE_WORD_CALLBACK_PREFIX):
         word_id_text = data.removeprefix(DELETE_WORD_CALLBACK_PREFIX)

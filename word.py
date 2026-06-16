@@ -99,7 +99,7 @@ def word_to_anki(word: Word) -> dict:
         "Related": "\n".join(word.related)
     }
 
-def word_to_html(word: Word) -> str:
+def word_to_html(word: Word, include_extra: bool = False) -> str:
     examples = list(zip(word.examples_nl, word.examples_en))
     examples_html = "\n".join(
         f"• {nl}\n  <i>{en}</i>" for nl, en in examples
@@ -107,15 +107,11 @@ def word_to_html(word: Word) -> str:
 
     sections = [
         f"<b>{word.dutch}</b>",
-        f"<b>Translation</b>\n<blockquote>{word.translation}</blockquote>",
-        f"<b>Grammar</b>\n<blockquote>{word.grammar}</blockquote>",
-        f"<b>Etymology</b>\n<blockquote>{word.etymology}</blockquote>",
+        f"<b>Translation</b>\n{word.translation}",
+        f"<b>Grammar</b>\n{word.grammar}",
+        f"<b>Etymology</b>\n{word.etymology}",
         f"<b>Pronunciation</b>\n{word.pronunciation}",
-        f"<b>Definitions</b>\nNL: {word.definition_nl}\nEN: {word.definition_en}",
     ]
-
-    if word.collocations:
-        sections.append(f"<b>Collocations</b>\n{', '.join(word.collocations)}")
 
     if word.synonyms:
         sections.append(f"<b>Synonyms</b>\n{', '.join(word.synonyms)}")
@@ -123,12 +119,18 @@ def word_to_html(word: Word) -> str:
     if word.related:
         sections.append(f"<b>Related</b>\n{', '.join(word.related)}")
 
-    if word.tags:
-        sections.append(f"<b>Tags</b>\n{', '.join(word.tags)}")
-
-    sections.append(f"<b>Score</b>\n{word.score}")
-
     if examples_html:
         sections.append(f"<b>Examples</b>\n{examples_html}")
+
+    if include_extra:
+        sections.append(f"<b>Definitions</b>\nNL: {word.definition_nl}\nEN: {word.definition_en}")
+
+        if word.collocations:
+            sections.append(f"<b>Collocations</b>\n{', '.join(word.collocations)}")
+
+        if word.tags:
+            sections.append(f"<b>Tags</b>\n{', '.join(word.tags)}")
+
+        sections.append(f"<b>Score</b>\n{word.score}")
 
     return "\n\n".join(sections)
