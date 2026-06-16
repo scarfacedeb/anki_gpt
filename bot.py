@@ -70,8 +70,13 @@ def word_actions_keyboard(word_id: int | None) -> InlineKeyboardMarkup | None:
 
 async def reply_word(update: Update, prefix: str, word: Word, word_id: int | None):
     """Reply with a word definition and its Telegram actions."""
+    await reply_word_message(update.message, prefix, word, word_id)
+
+
+async def reply_word_message(message, prefix: str, word: Word, word_id: int | None):
+    """Reply to a Telegram message with a word definition and its actions."""
     response_text = word_to_html(word)
-    await update.message.reply_html(
+    await message.reply_html(
         f"{prefix}\n\n{response_text}",
         reply_markup=word_actions_keyboard(word_id),
     )
@@ -221,27 +226,44 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await reply_word(update, "📖 Found in database:", existing_word, word_id)
         return
 
-    # Word not found - generate with GPT
-    response = generate_word(user_input, user_id)
+    status_message = await update.message.reply_text(f"Generating: {user_input}")
+    context.application.create_task(
+        process_new_word(update.message, status_message, user_input, user_id)
+    )
 
-    if response.context:
-        await update.message.reply_text(response.context)
 
-    if not response.words:
-        await update.message.reply_text("No words found or could not parse.")
-        return
+async def process_new_word(message, status_message, user_input: str, user_id: int):
+    """Generate, save, and sync a new word after the handler has returned."""
+    word_service = WordService()
 
-    # Save new words
-    for new_word in response.words:
-        await asyncio.to_thread(word_service.create, new_word)
-        word_id = await asyncio.to_thread(word_service.get_id, new_word.dutch)
-        await reply_word(update, "✅ Added:", new_word, word_id)
+    try:
+        # Word not found - generate with GPT
+        response = await asyncio.to_thread(generate_word, user_input, user_id)
 
-    # Sync with AnkiWeb after processing all words
-    await asyncio.to_thread(sync_anki)
+        if response.context:
+            await message.reply_text(response.context)
+
+        if not response.words:
+            await status_message.edit_text("No words found or could not parse.")
+            return
+
+        await status_message.edit_text(f"Saving {len(response.words)} word(s)...")
+
+        # Save new words
+        for new_word in response.words:
+            await asyncio.to_thread(word_service.create, new_word)
+            word_id = await asyncio.to_thread(word_service.get_id, new_word.dutch)
+            await reply_word_message(message, "✅ Added:", new_word, word_id)
+
+        await status_message.edit_text("Syncing with AnkiWeb...")
+        await asyncio.to_thread(sync_anki)
+        await status_message.edit_text("Done.")
+    except Exception as e:
+        logging.exception("Failed to process Telegram word request")
+        await status_message.edit_text(f"❌ Failed to process word: {e}")
 
 def main():
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).concurrent_updates(True).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("set_model", set_model))
