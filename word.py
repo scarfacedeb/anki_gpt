@@ -82,6 +82,10 @@ class WordTags(BaseModel):
     tags: list[str]
 
 
+def _section(title: str, body: str) -> str:
+    return f"<b><u>{title}</u></b>\n{body}"
+
+
 def word_to_anki(word: Word) -> dict:
     """Convert a Word object to Anki fields dictionary."""
     return {
@@ -106,31 +110,31 @@ def word_to_html(word: Word, include_extra: bool = False) -> str:
     )
 
     sections = [
-        f"<b>{word.dutch}</b>",
-        f"<b>Translation</b>\n{word.translation}",
-        f"<b>Grammar</b>\n{word.grammar}",
-        f"<b>Etymology</b>\n{word.etymology}",
-        f"<b>Pronunciation</b>\n{word.pronunciation}",
+        f"<b><u>{word.dutch}</u></b>",
+        _section("Translation", word.translation),
+        _section("Grammar", word.grammar),
+        _section("Etymology", word.etymology),
+        _section("Pronunciation", word.pronunciation),
     ]
 
     if word.synonyms:
-        sections.append(f"<b>Synonyms</b>\n{', '.join(word.synonyms)}")
+        sections.append(_section("Synonyms", ', '.join(word.synonyms)))
 
     if word.related:
-        sections.append(f"<b>Related</b>\n{', '.join(word.related)}")
+        sections.append(_section("Related", ', '.join(word.related)))
 
     if examples_html:
-        sections.append(f"<b>Examples</b>\n{examples_html}")
+        sections.append(_section("Examples", examples_html))
 
     if include_extra:
-        sections.append(f"<b>Definitions</b>\nNL: {word.definition_nl}\nEN: {word.definition_en}")
+        sections.append(_section("Definitions", f"NL: {word.definition_nl}\nEN: {word.definition_en}"))
 
         if word.collocations:
-            sections.append(f"<b>Collocations</b>\n{', '.join(word.collocations)}")
+            sections.append(_section("Collocations", ', '.join(word.collocations)))
 
         if word.tags:
-            sections.append(f"<b>Tags</b>\n{', '.join(word.tags)}")
+            sections.append(_section("Tags", ', '.join(word.tags)))
 
-        sections.append(f"<b>Score</b>\n{word.score}")
+        sections.append(_section("Score", str(word.score)))
 
     return "\n\n".join(sections)

@@ -25,6 +25,7 @@ logging.basicConfig(
 DELETE_WORD_CALLBACK_PREFIX = "delete_word:"
 REGENERATE_WORD_CALLBACK_PREFIX = "regenerate_word:"
 SHOW_MORE_CALLBACK_PREFIX = "show_more:"
+SHOW_LESS_CALLBACK_PREFIX = "show_less:"
 
 def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -57,7 +58,11 @@ def higher_effort(effort: str) -> str:
 
     return ALLOWED_EFFORTS[min(effort_index + 1, len(ALLOWED_EFFORTS) - 1)]
 
-def word_actions_keyboard(word_id: int | None, include_show_more: bool = True) -> InlineKeyboardMarkup | None:
+def word_actions_keyboard(
+    word_id: int | None,
+    include_show_more: bool = True,
+    include_show_less: bool = False,
+) -> InlineKeyboardMarkup | None:
     """Build inline actions for a saved word."""
     if word_id is None:
         return None
@@ -66,6 +71,10 @@ def word_actions_keyboard(word_id: int | None, include_show_more: bool = True) -
     if include_show_more:
         rows.append([
             InlineKeyboardButton("Show more", callback_data=f"{SHOW_MORE_CALLBACK_PREFIX}{word_id}"),
+        ])
+    if include_show_less:
+        rows.append([
+            InlineKeyboardButton("Show less", callback_data=f"{SHOW_LESS_CALLBACK_PREFIX}{word_id}"),
         ])
 
     rows.append(
@@ -185,7 +194,32 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"{prefix}\n\n{word_to_html(word, include_extra=True)}",
             parse_mode="HTML",
-            reply_markup=word_actions_keyboard(word_id, include_show_more=False),
+            reply_markup=word_actions_keyboard(
+                word_id,
+                include_show_more=False,
+                include_show_less=True,
+            ),
+        )
+
+    elif data.startswith(SHOW_LESS_CALLBACK_PREFIX):
+        word_id_text = data.removeprefix(SHOW_LESS_CALLBACK_PREFIX)
+        try:
+            word_id = int(word_id_text)
+        except ValueError:
+            await query.edit_message_text("❌ Could not show less: invalid word ID.")
+            return
+
+        word_service = WordService()
+        word = await asyncio.to_thread(word_service.get_by_id, word_id)
+        if not word:
+            await query.edit_message_text("Word was already deleted.")
+            return
+
+        prefix = get_message_prefix(query.message)
+        await query.edit_message_text(
+            f"{prefix}\n\n{word_to_html(word)}",
+            parse_mode="HTML",
+            reply_markup=word_actions_keyboard(word_id),
         )
 
     elif data.startswith(DELETE_WORD_CALLBACK_PREFIX):
