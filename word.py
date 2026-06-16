@@ -123,14 +123,14 @@ def word_to_html(word: Word, include_extra: bool = False) -> str:
     if word.related:
         sections.append(_section("Related", ', '.join(word.related)))
 
-    if examples_html:
-        sections.append(_section("Examples", examples_html))
-
     if include_extra:
         sections.append(_section("Definitions", f"NL: {word.definition_nl}\nEN: {word.definition_en}"))
 
         if word.collocations:
             sections.append(_section("Collocations", ', '.join(word.collocations)))
+
+        if examples_html:
+            sections.append(_section("Examples", examples_html))
 
         if word.tags:
             sections.append(_section("Tags", ', '.join(word.tags)))
