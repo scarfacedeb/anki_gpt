@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import asyncio
 
@@ -26,6 +26,13 @@ DELETE_WORD_CALLBACK_PREFIX = "delete_word:"
 REGENERATE_WORD_CALLBACK_PREFIX = "regenerate_word:"
 SHOW_MORE_CALLBACK_PREFIX = "show_more:"
 SHOW_LESS_CALLBACK_PREFIX = "show_less:"
+
+TELEGRAM_COMMANDS = (
+    BotCommand("start", "Show available commands"),
+    BotCommand("set_model", "Set OpenAI model"),
+    BotCommand("set_effort", "Set reasoning effort"),
+    BotCommand("settings", "View current settings"),
+)
 
 def authorized(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -108,11 +115,13 @@ def get_message_prefix(message) -> str:
 @authorized
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    commands_text = "\n".join(
+        f"/{command.command} - {command.description}"
+        for command in TELEGRAM_COMMANDS
+    )
     await update.message.reply_html(
         rf"Hi {user.mention_html()}! Available commands:\n"
-        rf"/set_model - Set OpenAI model\n"
-        rf"/set_effort - Set reasoning effort\n"
-        rf"/settings - View current settings"
+        f"{commands_text}"
     )
 
 @authorized
@@ -332,8 +341,18 @@ async def process_new_word(message, status_message, user_input: str, user_id: in
         logging.exception("Failed to process Telegram word request")
         await status_message.edit_text(f"❌ Failed to process word: {e}")
 
+async def set_telegram_commands(app: Application):
+    """Register slash commands so Telegram clients show them when typing /."""
+    await app.bot.set_my_commands(TELEGRAM_COMMANDS)
+
 def main():
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).concurrent_updates(True).build()
+    app = (
+        Application.builder()
+        .token(TELEGRAM_BOT_TOKEN)
+        .concurrent_updates(True)
+        .post_init(set_telegram_commands)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("set_model", set_model))
