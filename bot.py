@@ -336,7 +336,7 @@ async def process_new_word(message, status_message, user_input: str, user_id: in
 
         await status_message.edit_text("Syncing with AnkiWeb...")
         await asyncio.to_thread(sync_anki)
-        await status_message.edit_text("Done.")
+        await status_message.delete()
     except Exception as e:
         logging.exception("Failed to process Telegram word request")
         await status_message.edit_text(f"❌ Failed to process word: {e}")
